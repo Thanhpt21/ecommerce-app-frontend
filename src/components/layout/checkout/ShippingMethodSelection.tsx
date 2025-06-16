@@ -1,13 +1,11 @@
 // components/layout/checkout/ShippingMethodSelection.tsx
 import React, { useState, useEffect } from 'react';
 import { Button, Typography, Select, Spin } from 'antd';
-import { useTranslation } from 'react-i18next';
 import useShippingMethod from '@/stores/shippingMethodStore';
 import { useAllShippings } from '@/hooks/shipping/useAllShippings';
 import { Shipping } from '@/types/shipping.type';
 import Image from 'next/image';
 
-// Import các hình ảnh logo (điều chỉnh đường dẫn cho đúng với dự án của bạn)
 import VietnamPostLogo from '@/assets/images/delivery/vietnam-post.png';
 import GHTKLogo from '@/assets/images/delivery/ghtk.png';
 import GHNLogo from '@/assets/images/delivery/ghn.png';
@@ -21,7 +19,6 @@ interface ShippingMethodSelectionProps {
 }
 
 const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMethodSelected }) => {
-  const { t } = useTranslation('checkout');
   const {
     selectedShippingMethod,
     setSelectedShippingMethod,
@@ -30,26 +27,22 @@ const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMet
 
   const { data: allShippingsData, isLoading, isError, error } = useAllShippings();
 
-  // Khởi tạo localSelectedMethod là 'standard' nếu chưa có giá trị trong store
-  const [localSelectedMethod, setLocalSelectedMethod] = useState<string | null>(
-    selectedShippingMethod || 'standard' // ĐẶT MẶC ĐỊNH LÀ 'standard' TẠI ĐÂY
-  );
   const standardDeliveryFee = 30000;
-  const STANDARD_DELIVERY_ID = 0; // Hoặc một ID khác bạn gán cho Giao hàng tiêu chuẩn
+  const STANDARD_DELIVERY_ID = 0;
 
-  // Effect để xử lý trạng thái khi component mount hoặc selectedShippingMethod thay đổi
+  const [localSelectedMethod, setLocalSelectedMethod] = useState<string | null>(
+    selectedShippingMethod || 'standard'
+  );
+
   useEffect(() => {
-    // Nếu chưa có phương thức nào được chọn trong store, mặc định chọn 'standard'
     if (!selectedShippingMethod) {
       setSelectedShippingMethod('standard');
       setLocalSelectedMethod('standard');
       setShippingFee(standardDeliveryFee);
       onMethodSelected(STANDARD_DELIVERY_ID, standardDeliveryFee);
     } else {
-      // Nếu đã có từ store, cập nhật local state
       setLocalSelectedMethod(selectedShippingMethod);
 
-      // Đảm bảo onMethodSelected được gọi lại với thông tin phí và ID chính xác
       let idToReport: number | null = null;
       let feeToReport: number | null = null;
 
@@ -57,7 +50,6 @@ const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMet
         idToReport = STANDARD_DELIVERY_ID;
         feeToReport = standardDeliveryFee;
       } else if (selectedShippingMethod !== 'express' && allShippingsData?.data) {
-        // Đây là trường hợp đã chọn một tỉnh cụ thể cho Giao hàng nhanh
         const foundProvince = allShippingsData.data.find(
           (ship) => ship.provinceName === selectedShippingMethod
         );
@@ -103,12 +95,12 @@ const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMet
   };
 
   if (isLoading) {
-    return <Spin>{t('loading_shipping_methods')}...</Spin>;
+    return <Spin>Đang tải phương thức giao hàng...</Spin>;
   }
 
   if (isError) {
     console.error('Error fetching shipping methods:', error);
-    return <Typography.Text type="danger">{t('error_loading_shipping_methods')}</Typography.Text>;
+    return <Typography.Text type="danger">Lỗi khi tải phương thức giao hàng</Typography.Text>;
   }
 
   const shippingProvinces = allShippingsData?.data || [];
@@ -124,34 +116,33 @@ const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMet
 
   return (
     <div>
-      <Typography.Title level={4}>{t('delivery_method')}</Typography.Title>
+      <Typography.Title level={4}>Phương thức giao hàng</Typography.Title>
       <div className="mb-4">
         <Button
           type={localSelectedMethod === 'standard' ? 'primary' : 'default'}
           onClick={() => handleSelectMethod('standard')}
           className="mr-2"
         >
-          {t('standard_delivery')}
+          Giao hàng tiêu chuẩn
         </Button>
         <Button
           type={isExpressSelected ? 'primary' : 'default'}
           onClick={() => handleSelectMethod('express')}
         >
-          {t('express_delivery')}
+          Giao hàng nhanh
         </Button>
       </div>
 
       {localSelectedMethod === 'standard' && (
         <div className="mb-4">
-          <Typography.Text strong>{t('standard_delivery_fee')}:</Typography.Text>
+          <Typography.Text strong>Phí giao hàng tiêu chuẩn:</Typography.Text>
           <Typography.Text> {standardDeliveryFee.toLocaleString('vi-VN')} VNĐ</Typography.Text>
           <br />
           <Typography.Text type="secondary" className="text-sm">
-            {t('standard_delivery_desc')}
+            Thời gian giao hàng dự kiến từ 3-7 ngày làm việc.
           </Typography.Text>
-          {/* THÊM CÁC LOGO ĐƠN VỊ VẬN CHUYỂN */}
           <div className="mt-4 flex flex-wrap gap-3 items-center">
-            <Typography.Text strong>{t('supported_by')}:</Typography.Text>
+            <Typography.Text strong>Được hỗ trợ bởi:</Typography.Text>
             <Image src={VietnamPostLogo} alt="Vietnam Post" width={60} height={20} className="object-contain" />
             <Image src={GHTKLogo} alt="Giao Hàng Tiết Kiệm" width={60} height={20} className="object-contain" />
             <Image src={GHNLogo} alt="Giao Hàng Nhanh" width={60} height={20} className="object-contain" />
@@ -163,9 +154,9 @@ const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMet
 
       {(localSelectedMethod === 'express' || (localSelectedMethod !== 'standard' && localSelectedMethod !== null)) && (
         <div className="mb-4">
-          <Typography.Text strong>{t('select_province_for_express_prompt')}:</Typography.Text>
+          <Typography.Text strong>Vui lòng chọn tỉnh/thành phố để xem phí giao hàng nhanh:</Typography.Text>
           <Select
-            placeholder={t('select_a_province')}
+            placeholder="Chọn tỉnh/thành phố"
             style={{ width: '100%' }}
             onChange={handleSelectProvince}
             value={localSelectedMethod === 'express' ? undefined : localSelectedMethod}
@@ -179,24 +170,23 @@ const ShippingMethodSelection: React.FC<ShippingMethodSelectionProps> = ({ onMet
           {feeToDisplay !== null && feeToDisplay !== undefined && localSelectedMethod !== 'express' && (
             <div className="mt-2">
               <Typography.Text strong>
-                {t('express_delivery_fee_for')} {localSelectedMethod}:
+                Phí giao hàng nhanh cho {localSelectedMethod}:
               </Typography.Text>
               <Typography.Text> {feeToDisplay.toLocaleString('vi-VN')} VNĐ</Typography.Text>
               <br />
               <Typography.Text type="secondary" className="text-sm">
-                {t('express_delivery_desc')}
+                Thời gian giao hàng dự kiến từ 1-3 ngày làm việc.
               </Typography.Text>
             </div>
           )}
           {localSelectedMethod === 'express' && feeToDisplay === null && (
             <div className="mt-2">
-              <Typography.Text type="secondary">{t('please_select_a_province_to_see_fee')}</Typography.Text>
+              <Typography.Text type="secondary">Vui lòng chọn một tỉnh/thành phố để xem phí.</Typography.Text>
             </div>
           )}
-           {/* THÊM CÁC LOGO ĐƠN VỊ VẬN CHUYỂN NHANH NẾU CÓ */}
-           {isExpressSelected && feeToDisplay !== null && (
+          {isExpressSelected && feeToDisplay !== null && (
             <div className="mt-4 flex flex-wrap gap-3 items-center">
-              <Typography.Text strong>{t('express_supported_by')}:</Typography.Text>
+              <Typography.Text strong>Được hỗ trợ bởi:</Typography.Text>
               <Image src={GHNLogo} alt="Giao Hàng Nhanh Express" width={60} height={20} className="object-contain" />
               <Image src={JnTExpressLogo} alt="J&T Express" width={60} height={20} className="object-contain" />
               <Image src={ViettelPostLogo} alt="Viettel Post Express" width={60} height={20} className="object-contain" />

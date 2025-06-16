@@ -1,22 +1,27 @@
+// src/app/layout.tsx
 'use client';
 
-import '@/styles/globals.css';
 import { ReactNode } from 'react';
+import '@/styles/globals.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AppContent from '@/components/layout/AppContent'; // Import component mới
 
-const queryClient = new QueryClient(); // Khởi tạo QueryClient một lần duy nhất
+// Khởi tạo QueryClient một lần duy nhất bên ngoài component để tránh khởi tạo lại không cần thiết
+const queryClient = new QueryClient();
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: ReactNode;
+}) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body>
-        {/* Bọc toàn bộ ứng dụng trong QueryClientProvider */}
         <QueryClientProvider client={queryClient}>
-          {children} {/* children ở đây sẽ là LocaleLayout từ app/[locale]/layout.tsx */}
+          {/* Bọc AppContent bên trong QueryClientProvider */}
+          <AppContent>
+            {children}
+          </AppContent>
         </QueryClientProvider>
       </body>
     </html>

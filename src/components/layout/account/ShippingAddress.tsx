@@ -1,7 +1,5 @@
-// components/account/ShippingAddress.tsx
 'use client';
 
-import { useTranslation } from 'react-i18next';
 import { useCurrent } from '@/hooks/auth/useCurrent';
 import { useShippingAddresses } from '@/hooks/shipping-address/useShippingAddresses';
 import { useCreateShippingAddress } from '@/hooks/shipping-address/useCreateShippingAddress';
@@ -25,7 +23,6 @@ interface NewAddressFormProps {
 }
 
 const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initialValues }) => {
-  const { t } = useTranslation('account');
   const [form] = Form.useForm();
 
   const onFinish = (
@@ -39,58 +36,58 @@ const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initi
   return (
     <div className="bg-white p-6 rounded-md shadow-md mt-4">
       <h3 className="text-lg font-semibold mb-4">
-        {initialValues ? t('edit_address') : t('add_new_address')}
+        {initialValues ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}
       </h3>
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={initialValues}>
         <Row gutter={16}>
           <Col xs={24} md={12}>
             <Form.Item
-              label={t('full_name')}
+              label="Họ và tên"
               name="fullName"
-              rules={[{ required: true, message: t('please_enter_full_name') as string }]}
+              rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
             >
               <Input />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
             <Form.Item
-              label={t('phone_number')}
+              label="Số điện thoại"
               name="phone"
-              rules={[{ required: true, message: t('please_enter_phone_number') as string }]}
+              rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
             >
               <Input type="tel" />
             </Form.Item>
           </Col>
           <Col span={24}>
             <Form.Item
-              label={t('address')}
+              label="Địa chỉ"
               name="address"
-              rules={[{ required: true, message: t('please_enter_address') as string }]}
+              rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
             >
               <Input.TextArea rows={3} />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item label={t('ward')} name="ward">
+            <Form.Item label="Phường/Xã" name="ward">
               <Input />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item label={t('district')} name="district">
+            <Form.Item label="Quận/Huyện" name="district">
               <Input />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item label={t('province')} name="province">
+            <Form.Item label="Tỉnh/Thành phố" name="province">
               <Input />
             </Form.Item>
           </Col>
         </Row>
         <Form.Item>
           <Button type="primary" htmlType="submit" className="mr-2">
-            {t('save_address')}
+            Lưu địa chỉ
           </Button>
-          <Button onClick={onCancel}>{t('cancel')}</Button>
+          <Button onClick={onCancel}>Hủy</Button>
         </Form.Item>
       </Form>
     </div>
@@ -98,7 +95,6 @@ const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initi
 };
 
 const ShippingAddress: React.FC = () => {
-  const { t } = useTranslation('account');
   const { data: currentUser } = useCurrent();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,7 +108,6 @@ const ShippingAddress: React.FC = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ShippingAddressType | null>(null);
 
-  // Effect to automatically open new address form if returnUrl is present
   useEffect(() => {
     if (returnUrl && !isAddingNew && !editingAddress) {
       handleAddNew();
@@ -121,12 +116,12 @@ const ShippingAddress: React.FC = () => {
 
   const handleAddNew = () => {
     setIsAddingNew(true);
-    setEditingAddress(null); // Reset editing address when adding new
+    setEditingAddress(null);
   };
 
   const handleEdit = (address: ShippingAddressType) => {
     setEditingAddress(address);
-    setIsAddingNew(true); // Set to true to show the form
+    setIsAddingNew(true);
   };
 
   const handleSaveNewAddress = (
@@ -139,7 +134,7 @@ const ShippingAddress: React.FC = () => {
       { ...newAddressData, userId: currentUser.id },
       {
         onSuccess: () => {
-          message.success(t('address_added_success') as string);
+          message.success('Địa chỉ đã được thêm thành công!');
           setIsAddingNew(false);
           refetch().then(() => {
             if (returnUrl) {
@@ -148,7 +143,7 @@ const ShippingAddress: React.FC = () => {
           });
         },
         onError: (error: any) => {
-          message.error(t('address_added_failed') as string);
+          message.error('Thêm địa chỉ thất bại!');
           console.error('Error creating address:', error);
         },
       }
@@ -165,7 +160,7 @@ const ShippingAddress: React.FC = () => {
       { id: editingAddress.id, data: updatedAddressData },
       {
         onSuccess: () => {
-          message.success(t('address_updated_success') as string);
+          message.success('Địa chỉ đã được cập nhật thành công!');
           setIsAddingNew(false);
           setEditingAddress(null);
           refetch().then(() => {
@@ -175,7 +170,7 @@ const ShippingAddress: React.FC = () => {
           });
         },
         onError: (error: any) => {
-          message.error(t('address_updated_failed') as string);
+          message.error('Cập nhật địa chỉ thất bại!');
           console.error('Error updating address:', error);
         },
       }
@@ -184,16 +179,16 @@ const ShippingAddress: React.FC = () => {
 
   const handleDelete = (id: number) => {
     Modal.confirm({
-      title: t('confirm_delete_address') as string,
-      content: t('are_you_sure_delete') as string,
+      title: 'Xác nhận xóa địa chỉ',
+      content: 'Bạn có chắc chắn muốn xóa địa chỉ này?',
       onOk() {
         deleteAddress(id, {
           onSuccess: () => {
-            message.success(t('address_deleted_success') as string);
+            message.success('Địa chỉ đã được xóa thành công!');
             refetch();
           },
           onError: (error: any) => {
-            message.error(t('address_deleted_failed') as string);
+            message.error('Xóa địa chỉ thất bại!');
             console.error('Error deleting address:', error);
           },
         });
@@ -206,11 +201,11 @@ const ShippingAddress: React.FC = () => {
       { id: id, isDefault: true },
       {
         onSuccess: () => {
-          message.success(t('default_address_set_success') as string);
+          message.success('Địa chỉ mặc định đã được thiết lập thành công!');
           refetch();
         },
         onError: (error: any) => {
-          message.error(t('default_address_set_failed') as string);
+          message.error('Thiết lập địa chỉ mặc định thất bại!');
           console.error('Error setting default address:', error);
         },
       }
@@ -238,23 +233,21 @@ const ShippingAddress: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div>{t('loading')}...</div>;
+    return <div>Đang tải...</div>;
   }
 
   if (isError) {
-    return <div>{t('error_loading_addresses')}</div>;
+    return <div>Lỗi khi tải địa chỉ.</div>;
   }
 
-  // Determine if any form is active (adding new or editing existing)
-  const isFormActive = isAddingNew; // isAddingNew covers both adding and editing states
+  const isFormActive = isAddingNew;
 
   return (
     <div className="bg-white p-6 rounded-md shadow-md">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">{t('shipping_address')}</h2>
-        {/* Disable "Add New Address" button if a form is active */}
+        <h2 className="text-xl font-semibold">Địa chỉ giao hàng</h2>
         <Button icon={<PlusOutlined />} onClick={handleAddNew} disabled={isFormActive}>
-          {t('add_new_address')}
+          Thêm địa chỉ mới
         </Button>
       </div>
       {shippingAddresses && shippingAddresses.length > 0 ? (
@@ -269,32 +262,29 @@ const ShippingAddress: React.FC = () => {
                   key="edit"
                   icon={<EditOutlined />}
                   onClick={() => handleEdit(item)}
-                  // Disable if another form is active OR if this is not the address being edited
                   disabled={isFormActive && (!editingAddress || editingAddress.id !== item.id)}
                 >
-                  {t('edit')}
+                  Chỉnh sửa
                 </Button>,
                 <Button
                   key="delete"
                   icon={<DeleteOutlined />}
                   onClick={() => handleDelete(item.id)}
                   danger
-                  // Disable if any form is active (adding or editing)
                   disabled={isFormActive}
                 >
-                  {t('delete')}
+                  Xóa
                 </Button>,
                 !item.isDefault && (
                   <Button
                     key="default"
                     onClick={() => handleSetDefault(item.id)}
-                    // Disable if any form is active (adding or editing)
                     disabled={isFormActive}
                   >
-                    {t('set_as_default')}
+                    Đặt làm mặc định
                   </Button>
                 ),
-                item.isDefault && <Tag color="green">{t('default')}</Tag>,
+                item.isDefault && <Tag color="green">Mặc định</Tag>,
               ]}
             >
               <List.Item.Meta
@@ -305,10 +295,10 @@ const ShippingAddress: React.FC = () => {
           )}
         />
       ) : (
-        <p>{t('no_address_added')}</p>
+        <p>Bạn chưa thêm địa chỉ nào.</p>
       )}
 
-      {isAddingNew && ( // isAddingNew is true for both adding and editing
+      {isAddingNew && (
         <NewAddressForm
           onSave={handleSaveForm}
           onCancel={handleCancelNewAddress}

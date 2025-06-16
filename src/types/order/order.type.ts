@@ -18,7 +18,7 @@ export interface Order {
   shipping?: Shipping | null;
   items: OrderItem[];
 
-  status: 'pending' | 'paid' | 'shipping' | 'completed' | 'cancelled';
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "returned"; // Added "confirmed"
   paymentMethod: string;
   note?: string | null;
 

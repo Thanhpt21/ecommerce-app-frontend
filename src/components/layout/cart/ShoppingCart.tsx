@@ -1,30 +1,25 @@
-// components/ShoppingCart.js
 'use client';
 
 import Image from 'next/image';
 import { Table, Button, InputNumber, Space, Breadcrumb, Modal } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
 import { CartItem } from '@/types/cart.type';
 import { formatVND } from '@/utils/helpers';
 import useCart from '@/stores/cartStore';
-import { useLocaleContext } from '@/context/LocaleContext';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 
 const ShoppingCart = () => {
-  const { locale } = useLocaleContext();
-  const { t } = useTranslation('cart');
   const { items: cartItems, removeItem, increaseItemQuantity, decreaseItemQuantity, getTotalPrice, isHydrated } = useCart();
   const { currentUser, isLoading: authLoading } = useAuth();
-  const router = useRouter(); // Khởi tạo useRouter
+  const router = useRouter();
 
   const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
 
   if (!isHydrated || authLoading) {
-    return <div>{t('loading_cart')}...</div>;
+    return <div>Đang tải giỏ hàng...</div>;
   }
 
   const handleRemoveItem = (item: CartItem) => {
@@ -50,15 +45,14 @@ const ShoppingCart = () => {
     if (!currentUser) {
       setIsLoginModalVisible(true);
     } else {
-      router.push(`/${locale}/thanh-toan`); // Sử dụng router.push để điều hướng
+      router.push(`/thanh-toan`);
     }
   };
 
   const handleLoginModalOk = () => {
     setIsLoginModalVisible(false);
-    // Mã hóa URL hiện tại để truyền qua query parameter
-    const returnUrl = encodeURIComponent(`/${locale}/gio-hang`);
-    router.push(`/${locale}/login?returnUrl=${returnUrl}`); // Điều hướng đến trang đăng nhập kèm returnUrl
+    const returnUrl = encodeURIComponent(`/gio-hang`);
+    router.push(`/login?returnUrl=${returnUrl}`);
   };
 
   const handleLoginModalCancel = () => {
@@ -67,7 +61,7 @@ const ShoppingCart = () => {
 
   const columns = [
     {
-      title: t('image'),
+      title: 'Hình ảnh',
       dataIndex: 'thumb',
       key: 'thumb',
       render: (thumb: string, record: CartItem) => (
@@ -77,12 +71,12 @@ const ShoppingCart = () => {
       ),
     },
     {
-      title: t('product'),
+      title: 'Sản phẩm',
       dataIndex: 'title',
       key: 'title',
     },
     {
-      title: t('color'),
+      title: 'Màu sắc',
       dataIndex: 'selectedColor',
       key: 'color',
       render: (color: CartItem['selectedColor']) => (
@@ -99,12 +93,12 @@ const ShoppingCart = () => {
       ),
     },
     {
-      title: t('size'),
+      title: 'Kích thước',
       dataIndex: 'selectedSizeTitle',
       key: 'size',
     },
     {
-      title: t('quantity'),
+      title: 'Số lượng',
       dataIndex: 'quantity',
       key: 'quantity',
       render: (quantity: number, record: CartItem) => (
@@ -112,9 +106,9 @@ const ShoppingCart = () => {
       ),
     },
     {
-      title: t('total_price'),
+      title: 'Tổng cộng',
       key: 'totalPrice',
-      render: (_: any, record: CartItem) => {
+      render: (_:any, record: CartItem) => {
         const price = record.discountedPrice !== undefined ? record.discountedPrice : record.price;
         const totalPriceForItem = price * record.quantity;
         const originalTotalPriceForItem = record.price * record.quantity;
@@ -129,7 +123,7 @@ const ShoppingCart = () => {
       },
     },
     {
-      title: t('action'),
+      title: 'Hành động',
       key: 'action',
       render: (_: any, record: CartItem) => (
         <Button
@@ -148,34 +142,34 @@ const ShoppingCart = () => {
       <div className="mb-4">
           <Breadcrumb >
             <Breadcrumb.Item>
-              <Link href={`/${locale}`}>{t('home')}</Link>
+              <Link href="/">Trang chủ</Link>
             </Breadcrumb.Item>
-            <Breadcrumb.Item>{t('your_cart')}</Breadcrumb.Item>
+            <Breadcrumb.Item>Giỏ hàng của bạn</Breadcrumb.Item>
           </Breadcrumb>
       </div>
       {cartItems.length === 0 ? (
-        <p>{t('cart_is_empty')}</p>
+        <p>Giỏ hàng của bạn đang trống.</p>
       ) : (
         <>
           <Table dataSource={cartItems} columns={columns} rowKey={(record) => `${record.id}-${record.selectedColor?.id}-${record.selectedSizeId}`} pagination={false} />
           <div className="mt-4 flex justify-end items-center">
-            <span className="font-semibold text-lg mr-4">{t('overall_total')}: {formatVND(getTotalPrice())}</span>
+            <span className="font-semibold text-lg mr-4">Tổng cộng: {formatVND(getTotalPrice())}</span>
             <Button type="primary" size="large" onClick={handleCheckoutClick}>
-              {t('checkout')}
+              Thanh toán
             </Button>
           </div>
         </>
       )}
 
       <Modal
-        title={t('login_required_title')}
+        title="Yêu cầu đăng nhập"
         visible={isLoginModalVisible}
         onOk={handleLoginModalOk}
         onCancel={handleLoginModalCancel}
-        okText={t('login_now')}
-        cancelText={t('cancel')}
+        okText="Đăng nhập ngay"
+        cancelText="Hủy"
       >
-        <p>{t('login_required_message')}</p>
+        <p>Bạn cần đăng nhập để tiến hành thanh toán.</p>
       </Modal>
     </div>
   );

@@ -8,6 +8,7 @@ export interface CurrentUser {
   phoneNumber: string | null;
   gender: string | null;
   type_account: string;
+  profilePicture: string | null;
   isActive: boolean;
 }
 

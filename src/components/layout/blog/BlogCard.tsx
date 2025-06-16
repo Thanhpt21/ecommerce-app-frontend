@@ -1,13 +1,10 @@
-// src/components/layout/blog/BlogCard.tsx
-'use client'; // Đánh dấu đây là Client Component nếu cần tương tác client-side
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
-import { Card } from 'antd'; // Import Card từ Ant Design
-import { useLocaleContext } from '@/context/LocaleContext'; // Import context locale
+import { Card } from 'antd';
 
-// Đảm bảo Blog type được import đúng đường dẫn
-import { Blog } from '@/types/blog.type'; // Giả sử type Blog nằm trong types/blog.type.ts
+import { Blog } from '@/types/blog.type';
 
 const { Meta } = Card;
 
@@ -16,10 +13,8 @@ interface BlogCardProps {
 }
 
 export const BlogCard: React.FC<BlogCardProps> = ({ blog }) => {
-  const { locale } = useLocaleContext(); // Lấy locale từ context
-
   return (
-    <Link key={blog.id} href={`/${locale}/tin-tuc/${blog.slug}`} passHref>
+    <Link key={blog.id} href={`/tin-tuc/${blog.slug}`} passHref>
       <Card
         hoverable
         className="w-full h-full flex flex-col transition-shadow duration-300 hover:shadow-xl"
@@ -37,7 +32,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog }) => {
             <>
               <p className="text-gray-600 text-sm line-clamp-3 mb-2">{blog.description}</p>
               <div className="text-xs text-gray-500">
-                Ngày đăng: {new Date(blog.createdAt).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US')}
+                Ngày đăng: {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
               </div>
               <div className="mt-2 text-blue-600 hover:text-blue-800 font-medium">
                 Đọc thêm &rarr;

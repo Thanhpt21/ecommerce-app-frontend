@@ -1,15 +1,13 @@
-// components/product/ProductImageGallery.tsx
 'use client';
 
 import React, { useRef } from 'react';
 import Image from 'next/image';
-import { Card, Carousel, Button } from 'antd'; // Import Carousel and Button
-import { UpOutlined, DownOutlined } from '@ant-design/icons'; // Import arrow icons
-import { useTranslation } from 'react-i18next';
+import { Card, Carousel, Button } from 'antd';
+import { UpOutlined, DownOutlined } from '@ant-design/icons';
 
 interface ProductImageGalleryProps {
-  currentData: any; // Can be product or variant data
-  productTitle: string; // Original product title for alt text fallback
+  currentData: any;
+  productTitle: string;
   mainImage: string | null;
   onThumbnailClick: (imageUrl: string) => void;
 }
@@ -20,15 +18,13 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
   mainImage,
   onThumbnailClick,
 }) => {
-  const { t } = useTranslation();
-  const carouselRef = useRef<any>(null); // Create a ref for the Carousel
+  const carouselRef = useRef<any>(null);
 
   const allCurrentImages = currentData?.images
     ? [currentData.thumb, ...currentData.images].filter(Boolean)
     : [];
   const uniqueCurrentImages = Array.from(new Set(allCurrentImages));
 
-  // Handler for next/previous buttons
   const next = () => {
     carouselRef.current?.next();
   };
@@ -37,7 +33,6 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
     carouselRef.current?.prev();
   };
 
-  // Check if we need navigation arrows (more than 4 images)
   const showNavigation = uniqueCurrentImages.length > 4;
 
   return (
@@ -49,21 +44,21 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
             type="text"
             icon={<UpOutlined />}
             onClick={prev}
-            className="w-full !min-w-0 !p-0" // Adjust button padding if necessary
+            className="w-full !min-w-0 !p-0"
           />
         )}
         <div className="flex-grow w-full">
           <Carousel
             ref={carouselRef}
-            dots={false} // Hide default dots
-            vertical // Enable vertical mode
-            slidesToShow={4} // Show 4 images at a time
-            slidesToScroll={1} // Scroll one image at a time
-            infinite={false} // Do not loop endlessly
-            className="h-full" // Ensure carousel takes full height to fill container
+            dots={false}
+            vertical
+            slidesToShow={4}
+            slidesToScroll={1}
+            infinite={false}
+            className="h-full"
           >
             {uniqueCurrentImages.map((img: string, index: number) => (
-              <div key={img} className="px-1 py-1"> {/* Add padding for spacing between cards */}
+              <div key={img} className="px-1 py-1">
                 <Card
                   bodyStyle={{ padding: 0 }}
                   className={`relative w-full aspect-square overflow-hidden rounded-md cursor-pointer hover:opacity-80 border ${mainImage === img ? 'border-blue-500 border-2' : 'border-gray-300'}`}
@@ -72,7 +67,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
                 >
                   <Image
                     src={img}
-                    alt={`${currentData?.title || productTitle} - ${t('image')} ${index + 1}`}
+                    alt={`${currentData?.title || productTitle} - Hình ảnh ${index + 1}`}
                     fill
                     style={{ objectFit: 'cover' }}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -87,7 +82,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
             type="text"
             icon={<DownOutlined />}
             onClick={next}
-            className="w-full !min-w-0 !p-0" // Adjust button padding if necessary
+            className="w-full !min-w-0 !p-0"
           />
         )}
       </div>

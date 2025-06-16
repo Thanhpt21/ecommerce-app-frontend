@@ -4,7 +4,6 @@ import { Modal, Typography, Descriptions, Table, Image, Button, List } from 'ant
 import { Order } from '@/types/order/order.type';
 import { useState } from 'react';
 import { formatDate } from '@/utils/helpers';
-import { useTranslation } from 'react-i18next';
 import { useCurrent } from '@/hooks/auth/useCurrent';
 import { useOrdersByUser } from '@/hooks/order/useOrdersByUser';
 
@@ -15,19 +14,25 @@ interface OrderDetailViewProps {
 const { Title } = Typography;
 
 const OrderDetailView: React.FC<OrderDetailViewProps> = ({ order }) => {
-  const { t } = useTranslation('account');
   console.log('order in OrderDetailView:', order);
 
   return (
     <div className="border rounded-md p-4 mt-4">
-      <Title level={5} className="mb-2">{t('order_id')}: #{order.id}</Title>
+      <Title level={5} className="mb-2">ID Đơn hàng: #{order.id}</Title>
       <Descriptions bordered size="small">
-        <Descriptions.Item label={t('status')}>{t(`order_status_${order.status.toLowerCase()}`)}</Descriptions.Item>
-        <Descriptions.Item label={t('payment_method')}>{order.paymentMethod}</Descriptions.Item>
-        <Descriptions.Item label={t('order_placed')}>{formatDate(order.createdAt)}</Descriptions.Item>
+        <Descriptions.Item label="Trạng thái">
+          {order.status === 'pending' && 'Đang chờ xử lý'}
+          {order.status === 'confirmed' && 'Đã xác nhận'}
+          {order.status === 'shipped' && 'Đang giao hàng'}
+          {order.status === 'delivered' && 'Đã giao hàng'}
+          {order.status === 'cancelled' && 'Đã hủy'}
+          {order.status === 'returned' && 'Đã trả hàng'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Phương thức thanh toán">{order.paymentMethod}</Descriptions.Item>
+        <Descriptions.Item label="Ngày đặt hàng">{formatDate(order.createdAt)}</Descriptions.Item>
       
         {order.shippingAddress && (
-          <Descriptions.Item label={t('shipping_address')} span={3}>
+          <Descriptions.Item label="Địa chỉ giao hàng" span={3}>
             {order.shippingAddress.fullName}<br />
             {order.shippingAddress.phone}<br />
             {`${order.shippingAddress.address}, ${order.shippingAddress.ward}, ${order.shippingAddress.district}, ${order.shippingAddress.province}`}
@@ -35,72 +40,72 @@ const OrderDetailView: React.FC<OrderDetailViewProps> = ({ order }) => {
         )}
         {order.coupon && (
           <>
-            <Descriptions.Item label={t('coupon_code')}>{order.coupon.code}</Descriptions.Item>
-            <Descriptions.Item label={t('coupon_discount')}>
+            <Descriptions.Item label="Mã giảm giá">{order.coupon.code}</Descriptions.Item>
+            <Descriptions.Item label="Chiết khấu mã giảm giá">
               {order.coupon.discount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
             </Descriptions.Item>
           </>
         )}
         {order.shipping && (
-          <Descriptions.Item label={t('shipping_fee')}>
+          <Descriptions.Item label="Phí vận chuyển">
             {order.shipping.fee?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
           </Descriptions.Item>
         )}
-         {order.shippingFee !== undefined && order.shippingFee !== null && (
-          <Descriptions.Item label={t('shipping_fee')}>
+        {order.shippingFee !== undefined && order.shippingFee !== null && (
+          <Descriptions.Item label="Phí vận chuyển">
             {order.shippingFee?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
           </Descriptions.Item>
         )}
-        <Descriptions.Item label={t('note')} span={3}>{order.note || t('no_note')}</Descriptions.Item>
-          <Descriptions.Item label={t('total_amount')}>
+        <Descriptions.Item label="Ghi chú" span={3}>{order.note || 'Không có ghi chú'}</Descriptions.Item>
+        <Descriptions.Item label="Tổng số tiền">
           {order.finalAmount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
         </Descriptions.Item>
       </Descriptions>
 
-      <Title level={5} style={{ marginTop: 16 }}>{t('order_items')}</Title>
+      <Title level={5} style={{ marginTop: 16 }}>Sản phẩm trong đơn hàng</Title>
       <Table
         dataSource={order.items}
         rowKey="id"
         pagination={false}
         columns={[
           {
-            title: t('image'),
+            title: 'Hình ảnh',
             dataIndex: 'variant',
             key: 'image',
             render: (variant, item) => {
               const imageUrl = variant?.thumb || item.product?.thumb || '/images/no-image.png';
-              const altText = variant?.title || item.product?.title || t('product');
+              const altText = variant?.title || item.product?.title || 'Sản phẩm';
               return <Image src={imageUrl} alt={altText} width={50} height={50} />;
             },
           },
           {
-            title: t('product'),
+            title: 'Sản phẩm',
             render: (item) => (
               <span>
                 {item.variant?.title || item.product?.title || 'N/A'}
                 {item.variant?.color?.title
-                  ? ` - ${t('color')}: ${item.variant.color.title}`
+                  ? ` - Màu sắc: ${item.variant.color.title}`
                   : item.product?.color?.title
-                    ? ` - ${t('color')}: ${item.product.color.title}`
+                    ? ` - Màu sắc: ${item.product.color.title}`
                     : ''}
-                {item.size?.title && ` - ${t('size')}: ${item.size.title || 'N/A'}`}
+                {item.size?.title && ` - Kích thước: ${item.size.title || 'N/A'}`}
               </span>
             ),
             key: 'product',
           },
           {
-            title: t('quantity'),
+            title: 'Số lượng',
             dataIndex: 'quantity',
             key: 'quantity',
           },
           {
-            title: t('price'),
+            title: 'Giá',
             dataIndex: 'price',
             key: 'price',
             render: (price) => price?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
           },
           {
-            title: t('discount'),
+            title: 'Chiết khấu',
             dataIndex: 'discount',
             key: 'discount',
             render: (discount) => discount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
@@ -112,18 +117,16 @@ const OrderDetailView: React.FC<OrderDetailViewProps> = ({ order }) => {
 };
 
 interface PurchaseHistoryProps {
-  // Có thể có props nào đó nếu cần
+  // Props nếu cần
 }
 
 const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
-  const { t } = useTranslation('account');
   const { data: currentUser } = useCurrent();
   const userId = currentUser?.id;
   const { data: ordersData, isLoading, isError, error } = useOrdersByUser({ userId });
   const orders = ordersData?.data;
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
 
   const showOrderDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -136,16 +139,16 @@ const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
   };
 
   if (isLoading) {
-    return <div>{t('loading')}...</div>;
+    return <div>Đang tải...</div>;
   }
 
   if (isError) {
-    return <div>{t('error_loading_orders')}: {error?.message}</div>;
+    return <div>Lỗi khi tải đơn hàng: {error?.message}</div>;
   }
 
   return (
     <div className="bg-white p-6 rounded-md shadow-md">
-      <h2 className="text-xl font-semibold mb-4">{t('purchase_history')}</h2>
+      <h2 className="text-xl font-semibold mb-4">Lịch sử mua hàng</h2>
       {orders && orders.length > 0 ? (
         <List
           itemLayout="vertical"
@@ -156,15 +159,22 @@ const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
               className="mb-4 p-4"
               actions={[
                 <Button type="link" onClick={() => showOrderDetails(order)}>
-                  {t('view_details')}
+                  Xem chi tiết
                 </Button>,
               ]}
             >
               <List.Item.Meta
-                title={<div className="font-semibold">{t('order_id')}: {order.id}</div>}
-                description={`${t('order_placed')} ${formatDate(order.createdAt)} - ${t(`order_status_${order.status.toLowerCase()}`)} - ${order.finalAmount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}`}
+                title={<div className="font-semibold">ID Đơn hàng: {order.id}</div>}
+                description={`Ngày đặt hàng ${formatDate(order.createdAt)} - ${
+                  order.status === 'pending' ? 'Đang chờ xử lý' :
+                  order.status === 'confirmed' ? 'Đã xác nhận' :
+                  order.status === 'shipped' ? 'Đang giao hàng' :
+                  order.status === 'delivered' ? 'Đã giao hàng' :
+                  order.status === 'cancelled' ? 'Đã hủy' :
+                  order.status === 'returned' ? 'Đã trả hàng' : ''
+                } - ${order.finalAmount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}`}
               />
-              {order.items.slice(0, 3).map((item) => ( // Hiển thị tối đa 3 sản phẩm tóm tắt
+              {order.items.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center mt-2">
                   <div className="w-12 h-12 rounded-md overflow-hidden shadow-sm">
                     <Image
@@ -174,7 +184,7 @@ const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
                     />
                   </div>
                   <div className="ml-2 text-sm">
-                    {item.product?.title || item.variant?.title || 'Product'}
+                    {item.product?.title || item.variant?.title || 'Sản phẩm'}
                   </div>
                 </div>
               ))}
@@ -182,17 +192,17 @@ const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
           )}
         />
       ) : (
-        <p>{t('no_orders_yet')}</p>
+        <p>Chưa có đơn hàng nào.</p>
       )}
 
       {selectedOrder && (
         <Modal
           visible={isModalOpen}
-          title={`${t('order_details')}`}
+          title="Chi tiết đơn hàng"
           onCancel={handleCloseModal}
           footer={[
             <Button key="back" onClick={handleCloseModal}>
-              {t('close')}
+              Đóng
             </Button>,
           ]}
           width={1000}

@@ -1,6 +1,5 @@
 'use client';
 
-import { useTranslation } from 'react-i18next';
 import { useCurrent, CurrentUser } from '@/hooks/auth/useCurrent';
 import { useUpdateUser } from '@/hooks/user/useUpdateUser';
 import { Form, Input, Button, message, Avatar, Upload, Radio } from 'antd';
@@ -15,7 +14,6 @@ interface UploadFile extends File {
 }
 
 const PersonalInfo = () => {
-  const { t } = useTranslation('account');
   const { data: currentUser, isLoading, isError, refetch: refetchCurrentUser } = useCurrent();
   const { mutate: updateUser, isPending: isUpdating } = useUpdateUser();
   const [form] = Form.useForm();
@@ -41,12 +39,9 @@ const PersonalInfo = () => {
 
   const handleImageChange = (info: any) => {
     if (info.file.status === 'uploading') {
-      // Bạn có thể hiển thị trạng thái tải ảnh ở đây
       return;
     }
     if (info.file.status === 'done') {
-      // Khi upload xong, bạn có thể lấy URL từ response (nếu backend trả về)
-      // Hoặc bạn có thể đọc file trực tiếp ở client để hiển thị preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfileImage(e.target?.result as string);
@@ -55,7 +50,7 @@ const PersonalInfo = () => {
       setUploadFile(info.file.originFileObj as UploadFile);
       setHasChanges(true);
     } else if (info.file.status === 'error') {
-      message.error(t('upload_failed') as string);
+      message.error('Tải ảnh thất bại');
     }
   };
 
@@ -68,13 +63,13 @@ const PersonalInfo = () => {
         { id: currentUser.id, data: formData, file: fileToSend },
         {
           onSuccess: () => {
-            message.success(t('update_success') as string);
+            message.success('Cập nhật thành công!');
             setHasChanges(false);
             setUploadFile(null);
-            refetchCurrentUser(); // Refresh dữ liệu người dùng
+            refetchCurrentUser();
           },
           onError: (error: any) => {
-            message.error(t('update_failed') as string);
+            message.error('Cập nhật thất bại!');
             console.error('Update failed:', error);
           },
         }
@@ -83,32 +78,30 @@ const PersonalInfo = () => {
   };
 
   if (isLoading) {
-    return <div>{t('loading')}...</div>;
+    return <div>Đang tải...</div>;
   }
 
   if (isError || !currentUser) {
-    return <div>{t('error_loading_info')}</div>;
+    return <div>Lỗi khi tải thông tin.</div>;
   }
 
   const uploadProps = {
     name: 'file',
-    action: '/api/upload', // Thay thế bằng API upload ảnh của bạn
-    headers: {
-      // Thêm header authorization nếu cần
-    },
+    action: '/api/upload',
+    headers: {},
     onChange: handleImageChange,
     showUploadList: false,
   };
 
   return (
     <div className="bg-white p-6 rounded-md shadow-md">
-      <h2 className="text-xl font-semibold mb-4">{t('personal_info')}</h2>
+      <h2 className="text-xl font-semibold mb-4">Thông tin cá nhân</h2>
 
       <div className="flex items-center mb-4">
         <Avatar size={80} src={profileImage} />
         <Upload {...uploadProps}>
           <Button icon={<UploadOutlined />} className="ml-4">
-            {t('change_avatar')}
+            Đổi ảnh đại diện
           </Button>
         </Upload>
       </div>
@@ -118,23 +111,23 @@ const PersonalInfo = () => {
         layout="vertical"
         onValuesChange={onValuesChange}
         onFinish={onFinish}
-        initialValues={{ gender: currentUser.gender }} // Set initial value for gender
+        initialValues={{ gender: currentUser.gender }}
       >
-        <Form.Item label={t('name')} name="name">
+        <Form.Item label="Họ và tên" name="name">
           <Input />
         </Form.Item>
-        <Form.Item label={t('email')} name="email">
+        <Form.Item label="Email" name="email">
           <Input disabled />
         </Form.Item>
-        <Form.Item label={t('phone_number')} name="phoneNumber">
+        <Form.Item label="Số điện thoại" name="phoneNumber">
           <Input />
         </Form.Item>
-        <Form.Item label={t('gender')} name="gender">
+        <Form.Item label="Giới tính" name="gender">
           <Radio.Group>
-            <Radio value={null}>{t('not_specified')}</Radio>
-            <Radio value="male">{t('male')}</Radio>
-            <Radio value="female">{t('female')}</Radio>
-            <Radio value="other">{t('other')}</Radio>
+            <Radio value={null}>Không xác định</Radio>
+            <Radio value="male">Nam</Radio>
+            <Radio value="female">Nữ</Radio>
+            <Radio value="other">Khác</Radio>
           </Radio.Group>
         </Form.Item>
 
@@ -145,7 +138,7 @@ const PersonalInfo = () => {
             disabled={!hasChanges}
             loading={isUpdating}
           >
-            {t('update')}
+            Cập nhật
           </Button>
         </Form.Item>
       </Form>

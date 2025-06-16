@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, Button, Typography, Space, Input, Rate, Form, Avatar, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { TFunction } from 'i18next';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { Rating } from '@/types/product.type';
@@ -12,22 +11,19 @@ import { useUpdateRating } from '@/hooks/rating/useUpdateRating';
 import { useCreateRating } from '@/hooks/rating/useCreateRating';
 import { useRatings } from '@/hooks/rating/useRatings';
 import { useAuth } from '@/context/AuthContext';
-import { useLocaleContext } from '@/context/LocaleContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 interface RatingComponentProps {
   productId: number;
-  t: TFunction;
 }
 
-export default function RatingComponent({ productId, t }: RatingComponentProps) {
+export default function RatingComponent({ productId }: RatingComponentProps) {
   const [form] = Form.useForm();
   const { currentUser, isLoading: isLoadingAuth } = useAuth();
   const currentUserId = currentUser?.id;
-  const pathname = usePathname(); // Lấy đường dẫn hiện tại
-  const { locale } = useLocaleContext(); // Lấy locale hiện tại
+  const pathname = usePathname();
   const messageShownRef = useRef(false);
 
   const {
@@ -77,32 +73,32 @@ export default function RatingComponent({ productId, t }: RatingComponentProps) 
 
   useEffect(() => {
     if ((isCreateSuccess || isUpdateSuccess) && !messageShownRef.current) {
-      message.success(t('review_submitted_successfully'));
+      message.success('Đánh giá đã được gửi thành công!');
       refetchRatings();
       messageShownRef.current = true;
     }
     if (!isCreateSuccess && !isUpdateSuccess) {
       messageShownRef.current = false;
     }
-  }, [isCreateSuccess, isUpdateSuccess, t, refetchRatings]);
+  }, [isCreateSuccess, isUpdateSuccess, refetchRatings]);
 
   useEffect(() => {
     if (createError) {
-      message.error(`${t('error_submitting_review')}: ${createError.message}`);
+      message.error(`Lỗi khi gửi đánh giá: ${createError.message}`);
     }
     if (updateError) {
-      message.error(`${t('error_updating_review')}: ${updateError.message}`);
+      message.error(`Lỗi khi cập nhật đánh giá: ${updateError.message}`);
     }
-  }, [createError, updateError, t]);
+  }, [createError, updateError]);
 
   const handleRatingSubmit = async (values: { rating: number; comment: string }) => {
     if (values.rating === 0) {
-      message.error(t('please_select_a_rating'));
+      message.error('Vui lòng chọn số sao đánh giá!');
       return;
     }
 
     if (!currentUserId) {
-      message.error(t('you_must_be_logged_in_to_submit_a_review'));
+      message.error('Bạn phải đăng nhập để gửi đánh giá.');
       return;
     }
 
@@ -125,43 +121,42 @@ export default function RatingComponent({ productId, t }: RatingComponentProps) 
         });
       }
     } catch (error) {
-      // error được xử lý bởi useEffect
+      // Error handled by useEffect
     }
   };
 
   if (isLoadingRatings || isLoadingAuth) {
-    return <div className="text-center py-4 text-gray-600">{t('loading_reviews')}...</div>;
+    return <div className="text-center py-4 text-gray-600">Đang tải đánh giá...</div>;
   }
 
   if (isErrorRatings) {
     return (
       <div className="text-center py-4 text-red-500">
-        {t('error_loading_reviews')}: {ratingsError?.message}
+        Lỗi khi tải đánh giá: {ratingsError?.message}
       </div>
     );
   }
 
   const ratings = ratingsData?.data || [];
 
-    // Tạo URL cho trang đăng nhập với returnUrl
-  const loginUrl = `/${locale}/login?returnUrl=${encodeURIComponent(pathname)}`;
+  const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname)}`;
 
   return (
     <div className="py-4">
-      <Title level={4} className="mb-4">{t('your_review')}</Title>
+      <Title level={4} className="mb-4">Đánh giá của bạn</Title>
       {currentUserId ? (
         <Form form={form} layout="vertical" onFinish={handleRatingSubmit}>
           <Form.Item
-            label={t('your_rating')}
+            label="Xếp hạng của bạn"
             name="rating"
-            rules={[{ required: true, message: t('please_select_a_rating') }]}
+            rules={[{ required: true, message: 'Vui lòng chọn số sao đánh giá!' }]}
           >
             <Rate disabled={isCreatingRating || isUpdatingRating} />
           </Form.Item>
-          <Form.Item label={t('your_comment')} name="comment">
+          <Form.Item label="Bình luận của bạn" name="comment">
             <TextArea
               rows={4}
-              placeholder={t('share_your_thoughts')}
+              placeholder="Chia sẻ suy nghĩ của bạn về sản phẩm..."
               disabled={isCreatingRating || isUpdatingRating}
             />
           </Form.Item>
@@ -171,23 +166,23 @@ export default function RatingComponent({ productId, t }: RatingComponentProps) 
               htmlType="submit"
               loading={isCreatingRating || isUpdatingRating}
             >
-              {userExistingRating ? t('update_review') : t('submit_review')}
+              {userExistingRating ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
             </Button>
           </Form.Item>
         </Form>
       ) : (
         <p className="text-gray-600">
-          {t('log_in_to_submit_a_review')}{' '}
+          Đăng nhập để gửi đánh giá.{' '}
           <Link href={loginUrl} className="text-blue-500 underline hover:no-underline font-medium">
-            {t('login_now')}
+            Đăng nhập ngay
           </Link>
         </p>
       )}
 
       <div className="mt-8">
-        <Title level={4} className="mb-4">{t('customer_reviews')}</Title>
+        <Title level={4} className="mb-4">Đánh giá của khách hàng</Title>
         {ratings.length === 0 ? (
-          <p className="text-gray-600">{t('no_customer_reviews_yet')}</p>
+          <p className="text-gray-600">Chưa có đánh giá nào từ khách hàng.</p>
         ) : (
           <Space direction="vertical" className="w-full">
             {ratings.map((rating) => (
