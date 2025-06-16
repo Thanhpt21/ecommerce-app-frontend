@@ -9,7 +9,7 @@ import Image from 'next/image';
 import { useCart } from '@/stores/cartStore';
 import { useWishlist } from '@/stores/useWishlistStore';
 import { useLogout } from '@/hooks/auth/useLogout';
-import { useMemo, useEffect, useState } from 'react'; 
+import { useMemo, useState } from 'react'; 
 import { useAuth } from '@/context/AuthContext';
 import { useAllCategories } from '@/hooks/category/useAllCategories';
 import { Category } from '@/types/category.type';
@@ -102,7 +102,7 @@ const Header = ({ config }: HeaderProps) => {
           {isAdmin && (
             <Menu.Item key="admin">
               <Link href="/admin">
-                Bảng điều khiển Admin
+                Quản trị
               </Link>
             </Menu.Item>
           )}

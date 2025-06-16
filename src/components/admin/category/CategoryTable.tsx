@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {
   Table,
@@ -10,43 +10,69 @@ import {
   Button,
   Modal,
   message,
-} from 'antd'
-import type { ColumnsType } from 'antd/es/table'
+  Spin,
+  Typography
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
-} from '@ant-design/icons'
-import { useState } from 'react'
+  PlusOutlined,
+} from '@ant-design/icons';
+import { useState, useMemo } from 'react';
 
-
-
-
-
-import { useDebounce } from '@/hooks/useDebounce'
-import { CategoryCreateModal } from './CategoryCreateModal'
-import { CategoryUpdateModal } from './CategoryUpdateModal'
-import { useCategories } from '@/hooks/category/useCategories'
-import { useDeleteCategory } from '@/hooks/category/useDeleteCategory'
-import { Category } from '@/types/category.type'
+import { CategoryCreateModal } from './CategoryCreateModal';
+import { CategoryUpdateModal } from './CategoryUpdateModal';
+import { useAllCategories } from '@/hooks/category/useAllCategories';
+import { useDeleteCategory } from '@/hooks/category/useDeleteCategory';
+import { Category } from '@/types/category.type';
 
 export default function CategoryTable() {
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
-  const [inputValue, setInputValue] = useState('')
-  const [openCreate, setOpenCreate] = useState(false)
-  const [openUpdate, setOpenUpdate] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [inputValue, setInputValue] = useState('');
+  const [openCreate, setOpenCreate] = useState(false);
+  const [openUpdate, setOpenUpdate] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]); // State to manage expanded rows
 
-  const { data, isLoading, refetch } = useCategories({ page, limit: 10, search: search })
-  const { mutateAsync: deleteCategory, isPending: isDeleting } = useDeleteCategory()
+  const { data: categoriesData, isLoading, refetch } = useAllCategories();
+  const { mutateAsync: deleteCategory, isPending: isDeleting } = useDeleteCategory();
 
-  const columns: ColumnsType<Category> = [
+  // Helper function to build a tree structure from a flat list of categories
+  const buildCategoryTree = (data: Category[], parentId: number | null = null): (Category & { children?: Category[] })[] => {
+    return data
+      .filter((category) => category.parentId === parentId)
+      .map((category) => ({
+        ...category,
+        children: buildCategoryTree(data, category.id),
+      }));
+  };
+
+  // Create the category tree from fetched data. Only top-level categories form the root.
+  const categoriesTree = useMemo(() => {
+    if (!categoriesData) return [];
+    const tree = buildCategoryTree(categoriesData, null);
+    return tree;
+  }, [categoriesData]);
+
+  // Function to handle row expansion/collapse when title is clicked
+  const handleExpand = (record: Category & { children?: Category[] }) => {
+    const key = record.id;
+    if (expandedRowKeys.includes(key)) {
+      setExpandedRowKeys(expandedRowKeys.filter((k) => k !== key)); // Collapse
+    } else {
+      setExpandedRowKeys([...expandedRowKeys, key]); // Expand
+    }
+  };
+
+  const columns: ColumnsType<Category & { children?: Category[] }> = [
     {
-        title: 'STT',
-        key: 'index',
-        width: 60,
-        render: (_text, _record, index) => (page - 1) * Number(process.env.NEXT_PUBLIC_PAGE_SIZE) + index + 1,
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_text, _record, index) => (page - 1) * 10 + index + 1,
     },
     {
       title: 'Hình ảnh',
@@ -69,11 +95,40 @@ export default function CategoryTable() {
       title: 'Tên danh mục',
       dataIndex: 'title',
       key: 'title',
+      render: (text: string, record) => {
+        // Check if the category has children to determine if it should be clickable
+        const hasChildren = record.children && record.children.length > 0;
+        return hasChildren ? (
+          <Typography.Link
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent row click event if any
+              handleExpand(record);
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            {text}
+          </Typography.Link>
+        ) : (
+          text
+        );
+      },
     },
     {
       title: 'Slug',
       dataIndex: 'slug',
       key: 'slug',
+    },
+    {
+      title: 'Danh mục cha',
+      dataIndex: 'parentId',
+      key: 'parentId',
+      render: (parentId: number | null) => {
+        if (parentId === null) {
+          return <Tag color="blue">Danh mục gốc</Tag>;
+        }
+        const parentCategory = categoriesData?.find((cat: Category) => cat.id === parentId);
+        return parentCategory ? parentCategory.title : 'Không xác định';
+      },
     },
     {
       title: 'Hành động',
@@ -85,8 +140,8 @@ export default function CategoryTable() {
             <EditOutlined
               style={{ color: '#1890ff', cursor: 'pointer' }}
               onClick={() => {
-                setSelectedCategory(record)
-                setOpenUpdate(true)
+                setSelectedCategory(record);
+                setOpenUpdate(true);
               }}
             />
           </Tooltip>
@@ -102,26 +157,56 @@ export default function CategoryTable() {
                   cancelText: 'Hủy',
                   onOk: async () => {
                     try {
-                      await deleteCategory(record.id)
-                      message.success('Xoá danh mục thành công')
-                      refetch?.()
+                      await deleteCategory(record.id);
+                      message.success('Xoá danh mục thành công');
+                      refetch?.();
                     } catch (error: any) {
-                      message.error(error?.response?.data?.message || 'Xoá thất bại')
+                      message.error(error?.response?.data?.message || 'Xoá thất bại');
                     }
                   },
-                })
+                });
               }}
             />
           </Tooltip>
         </Space>
       ),
     },
-  ]
+  ];
 
   const handleSearch = () => {
-    setPage(1)
-    setSearch(inputValue)
-  }
+    setPage(1);
+    setSearch(inputValue);
+  };
+
+  // Filter the tree data for display based on search input
+  const filteredCategoriesTree = useMemo(() => {
+    if (!search || !categoriesData) {
+      return categoriesTree;
+    }
+    const lowerCaseSearch = search.toLowerCase();
+
+    const filterNodes = (nodes: (Category & { children?: Category[] })[]): (Category & { children?: Category[] })[] => {
+      return nodes.filter(node => {
+        const matches = 
+          node.title.toLowerCase().includes(lowerCaseSearch) ||
+          node.slug.toLowerCase().includes(lowerCaseSearch);
+        
+        let filteredChildren: (Category & { children?: Category[] })[] | undefined;
+        if (node.children && node.children.length > 0) {
+          filteredChildren = filterNodes(node.children);
+        }
+
+        if (matches || (filteredChildren && filteredChildren.length > 0)) {
+          // If a parent matches or has matching children, ensure its children are included
+          return { ...node, children: filteredChildren || [] };
+        }
+        return false;
+      }).map(node => ({ ...node }));
+    };
+    const filtered = filterNodes(categoriesTree);
+    return filtered;
+  }, [categoriesTree, search, categoriesData]);
+
 
   return (
     <div>
@@ -140,20 +225,39 @@ export default function CategoryTable() {
           </Button>
         </div>
         <Button type="primary" onClick={() => setOpenCreate(true)}>
-          Tạo mới
+          <PlusOutlined /> Tạo mới
         </Button>
       </div>
 
       <Table
         columns={columns}
-        dataSource={data?.data || []}
+        dataSource={filteredCategoriesTree}
         rowKey="id"
-        loading={isLoading}
+        loading={isLoading || isDeleting}
         pagination={{
-          total: data?.total,
+          total: categoriesData?.length,
           current: page,
           pageSize: 10,
           onChange: (p) => setPage(p),
+        }}
+        expandable={{ 
+          childrenColumnName: 'children',
+          // Use a custom expandIcon render function to hide the default +/- button
+          expandIcon: () => null, 
+          // Control expanded rows via state
+          expandedRowKeys: expandedRowKeys,
+          // This onExpand is usually triggered by the default icon, but still useful
+          // if we decide to add other expansion triggers.
+          onExpand: (expanded, record) => {
+            if (expanded) {
+              setExpandedRowKeys((prev) => [...prev, record.id]);
+            } else {
+              setExpandedRowKeys((prev) => prev.filter((key) => key !== record.id));
+            }
+          },
+          // Ant Design will automatically indent based on childrenColumnName
+          // and manage the internal tree structure for expanded rows.
+          // We rely on our `handleExpand` on the title for user interaction.
         }}
       />
 
@@ -161,6 +265,7 @@ export default function CategoryTable() {
         open={openCreate}
         onClose={() => setOpenCreate(false)}
         refetch={refetch}
+        allCategories={categoriesData || []}
       />
 
       <CategoryUpdateModal
@@ -168,7 +273,8 @@ export default function CategoryTable() {
         onClose={() => setOpenUpdate(false)}
         category={selectedCategory}
         refetch={refetch}
+        allCategories={categoriesData || []}
       />
     </div>
-  )
+  );
 }

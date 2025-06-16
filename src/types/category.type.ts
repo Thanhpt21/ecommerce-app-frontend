@@ -5,4 +5,6 @@ export interface Category {
   image: string | null
   createdAt: string
   updatedAt: string
+  parentId?: number | null // Thêm parentId
+  children?: Category[];
 }

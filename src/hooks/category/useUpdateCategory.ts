@@ -10,17 +10,19 @@ export const useUpdateCategory = () => {
       file,
     }: {
       id: number | string
-      data: any
+      data: FormData
       file?: File
     }) => {
-      const formData = new FormData()
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value as any)
-      })
-      if (file) formData.append('file', file)
+      const formDataToSend = data; 
 
-      const res = await api.put(`/categories/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      if (file) {
+        formDataToSend.append('image', file);
+      }
+
+      const res = await api.put(`/categories/${id}`, formDataToSend, {
+        headers: { 
+          'Content-Type': 'multipart/form-data' 
+        },
       })
       return res.data
     },
