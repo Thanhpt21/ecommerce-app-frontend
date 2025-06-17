@@ -82,6 +82,11 @@ export default function ProductTable() {
       dataIndex: 'title',
       key: 'title',
     },
+     {
+      title: 'Slug',
+      dataIndex: 'slug',
+      key: 'slug',
+    },
     {
       title: 'Giá / Giảm giá',
       key: 'price',

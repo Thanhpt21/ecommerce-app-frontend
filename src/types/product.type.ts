@@ -35,9 +35,14 @@ export interface Brand {
 }
 
 export interface Category {
-  id: number;
-  title: string;
-  // ... other Category properties
+  id: number
+  title: string
+  slug: string
+  image: string | null
+  createdAt: string
+  updatedAt: string
+  parentId?: number | null // Thêm parentId
+  children?: Category[];
 }
 
 export interface Color {
@@ -101,7 +106,7 @@ export interface ProductCreateModalProps {
   onClose: () => void;
   refetch: () => void;
   colors: { id: string; title: string }[];
-  categories: { id: string; title: string }[];
+  categories: Category[];
   brands: { id: string; title: string }[];
   sizes: { id: string; title: string }[];
 }
@@ -112,7 +117,7 @@ export interface ProductUpdateModalProps {
   product: Product | null;
   refetch: () => void;
   colors: { id: string; title: string }[];
-  categories: { id: string; title: string }[];
+  categories: Category[];
   brands: { id: string; title: string }[];
   sizes: { id: string; title: string }[];
 }

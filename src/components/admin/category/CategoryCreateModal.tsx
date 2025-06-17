@@ -59,7 +59,7 @@ export const CategoryCreateModal = ({
       formData.append('parentId', parentIdValue.toString());
 
       const file = fileList?.[0]?.originFileObj;
-      if (file) { // Chỉ thêm file nếu có
+      if (file) {
         formData.append('image', file);
       }
       await mutateAsync(formData); // Truyền formData

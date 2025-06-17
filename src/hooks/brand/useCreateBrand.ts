@@ -4,13 +4,11 @@ import { api } from '@/lib/axios'
 
 export const useCreateBrand = () => {
   return useMutation({
-    mutationFn: async (data: any) => {
-      const formData = new FormData()
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value as any)
-      })
-      const res = await api.post('/brands', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+    // 'data' here is already the FormData object created in the frontend
+    mutationFn: async (data: FormData) => {
+      // Pass the FormData object directly to api.post
+      const res = await api.post('/brands', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }, // Explicitly setting this header is good, though axios often handles it for FormData
       })
       return res.data
     },

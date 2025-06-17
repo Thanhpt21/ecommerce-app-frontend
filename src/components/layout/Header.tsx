@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Input, Menu, Dropdown, Badge, Spin } from 'antd';
-import { MenuOutlined, SearchOutlined, ShoppingCartOutlined, UserOutlined, HeartOutlined, LoadingOutlined, DownOutlined } from '@ant-design/icons';
+import { MenuOutlined, SearchOutlined, ShoppingCartOutlined, UserOutlined, HeartOutlined, LoadingOutlined } from '@ant-design/icons'; // Removed DownOutlined
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Config } from '@/types/config.type';
@@ -39,47 +39,67 @@ const Header = ({ config }: HeaderProps) => {
   const isAdmin = currentUser?.role === 'admin';
 
   // Fetch Product Categories
-  const { data: productCategories, isLoading: isLoadingProductCategories } = useAllCategories();
+  const { data: allCategories, isLoading: isLoadingAllCategories } = useAllCategories();
 
-  // Extract category slugs for quick lookup (use useMemo for optimization)
-  const categorySlugs = useMemo(() => {
-    return new Set<string>((productCategories as Category[] | undefined)?.map((cat: Category) => cat.slug) || []);
-  }, [productCategories]);
+  // Hàm trợ giúp để xây dựng cấu trúc cây danh mục
+  const buildCategoryTree = (data: Category[], parentId: number | null = null): (Category & { children?: Category[] })[] => {
+    return data
+      .filter((category) => category.parentId === parentId)
+      .map((category) => ({
+        ...category,
+        children: buildCategoryTree(data, category.id),
+      }));
+  };
 
-  const navigationItemsConfig = [
-    { label: 'Trang chủ', href: '/', key: 'home' },
-    { label: 'Giới thiệu', href: '/gioi-thieu', key: 'about_us' },
-    { label: 'Sản phẩm', href: '/san-pham', key: 'products', hasDropdown: true },
-    { label: 'Tin tức', href: '/tin-tuc', key: 'blog' },
-    { label: 'Liên hệ', href: '/lien-he', key: 'contact' },
-  ];
+  // Tạo cây danh mục chỉ với các danh mục cha cấp cao nhất
+  const categoriesTree = useMemo(() => {
+    if (!allCategories) return [];
+    return buildCategoryTree(allCategories, null);
+  }, [allCategories]);
+
+  // Extract all category slugs for quick lookup (for getSelectedKey)
+  const allCategorySlugs = useMemo(() => {
+    const slugs = new Set<string>();
+    const collectSlugs = (categories: Category[]) => {
+      categories.forEach(cat => {
+        slugs.add(cat.slug);
+        if (cat.children) {
+          collectSlugs(cat.children);
+        }
+      });
+    };
+    if (allCategories) {
+      collectSlugs(allCategories);
+    }
+    return slugs;
+  }, [allCategories]);
+
 
   // Use useMemo to optimize getSelectedKey
   const getSelectedKey = useMemo(() => {
     const pathSegments = pathname.split('/').filter(segment => segment);
 
+    // If pathname is root, no specific menu item will be selected in the main menu
+    // as "Trang chủ" is removed. The logo still navigates to home.
     if (pathname === '/') {
-      return ['home'];
+      return ['']; // Or handle as needed if you have a default selection
     }
 
-    const potentialCategorySlug = pathSegments[0];
-    if (potentialCategorySlug && categorySlugs.has(potentialCategorySlug)) {
-      return ['products'];
+    // Check for category slugs (both parent and sub)
+    if (pathSegments.length > 0 && allCategorySlugs.has(pathSegments[0])) {
+        // Find the category by slug
+        const activeCategory = allCategories?.find((cat: Category) => cat.slug === pathSegments[0]);
+        if (activeCategory) {
+            // If it's a subcategory, select its key. Its parent's submenu will automatically highlight.
+            // If it's a top-level category, select its key.
+            return [`cat-${activeCategory.id}`]; 
+        }
     }
-
-    for (const item of navigationItemsConfig) {
-      if (item.key === 'home' || item.key === 'products') continue;
-      
-      if (pathname === item.href) {
-        return [item.key];
-      }
-      
-      if (pathname.startsWith(item.href + '/')) {
-        return [item.key];
-      }
-    }
+    
+    // Fallback for other pages (Giới thiệu, Tin tức, Liên hệ moved to top bar)
+    // No explicit selection for these in the main menu anymore
     return ['']; 
-  }, [pathname, categorySlugs]);
+  }, [pathname, allCategorySlugs, allCategories]);
 
   const handleLogout = () => {
     logoutUser();
@@ -102,7 +122,7 @@ const Header = ({ config }: HeaderProps) => {
           {isAdmin && (
             <Menu.Item key="admin">
               <Link href="/admin">
-                Quản trị
+                Bảng điều khiển Admin
               </Link>
             </Menu.Item>
           )}
@@ -127,55 +147,61 @@ const Header = ({ config }: HeaderProps) => {
     </Menu>
   );
 
-  // Menu cho danh mục sản phẩm
-  const productCategoriesMenu = (
-    <Menu>
-      {isLoadingProductCategories ? (
-        <Menu.Item key="loading-products" disabled>
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />} className="mr-2" />
-          Đang tải...
-        </Menu.Item>
-      ) : productCategories && productCategories.length > 0 ? (
-        productCategories.map((category: Category) => (
-          <Menu.Item key={`product-category-${category.id}`}>
-            <Link href={`/${category.slug}`}>
-              {category.title}
-            </Link>
-          </Menu.Item>
-        ))
-      ) : (
-        <Menu.Item key="no-product-categories" disabled>
-          Không có danh mục nào
-        </Menu.Item>
-      )}
-    </Menu>
-  );
-
   const mobileMenuItems = (
     <Menu selectedKeys={getSelectedKey} className="w-full">
-      {navigationItemsConfig.map(item => {
-        if (item.hasDropdown) {
-          const dropdownMenu = productCategoriesMenu;
+      {isLoadingAllCategories ? (
+        <Menu.Item key="loading-categories-mobile" disabled>
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} className="mr-2" />
+          Đang tải danh mục...
+        </Menu.Item>
+      ) : (
+        categoriesTree.map((category) => {
+          if (category.children && category.children.length > 0) {
+            return (
+              <Menu.SubMenu
+                key={`cat-${category.id}`}
+                title={
+                  // Removed DownOutlined from mobile submenu title
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>{category.title}</span>
+                    {/* The Ant Design Menu.SubMenu component for mobile will automatically add an arrow icon if there are children */}
+                  </div>
+                }
+              >
+                {/* Link to parent category (e.g., all products in that category) */}
+                <Menu.Item key={`cat-${category.id}-all`}>
+                  <Link href={`/${category.slug}`}>Tất cả {category.title}</Link>
+                </Menu.Item>
+                {category.children.map((subCategory) => (
+                  <Menu.Item key={`subcat-${subCategory.id}`}>
+                    <Link href={`/${subCategory.slug}`}>{subCategory.title}</Link>
+                  </Menu.Item>
+                ))}
+              </Menu.SubMenu>
+            );
+          }
           return (
-            <Menu.SubMenu key={item.key} title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>{item.label}</span>
-                <DownOutlined style={{ fontSize: '12px' }} />
-              </div>
-            }>
-              <Menu.Item key={`${item.key}-all`}>
-                <Link href={item.href}>Tất cả</Link>
-              </Menu.Item>
-              {dropdownMenu.props.children}
-            </Menu.SubMenu>
+            <Menu.Item key={`cat-${category.id}`}>
+              <Link href={`/${category.slug}`}>{category.title}</Link>
+            </Menu.Item>
           );
-        }
-        return (
-          <Menu.Item key={item.key}>
-            <Link href={item.href}>{item.label}</Link>
-          </Menu.Item>
-        );
-      })}
+        })
+      )}
+      
+      <Menu.Divider />
+      {/* Moved to top bar: Giới thiệu, Tin tức, Liên hệ will be accessed via top bar.
+          Keeping here for mobile if desired, or remove if strictly top bar only.
+          For now, assume mobile menu can still list them if needed. */}
+      <Menu.Item key="about-mobile">
+        <Link href="/gioi-thieu">Giới thiệu</Link>
+      </Menu.Item>
+      <Menu.Item key="blog-mobile">
+        <Link href="/tin-tuc">Tin tức</Link>
+      </Menu.Item>
+      <Menu.Item key="contact-mobile">
+        <Link href="/lien-he">Liên hệ</Link>
+      </Menu.Item>
+
       <Menu.Divider />
       <Menu.Item key="cart-mobile">
         <Link href="/gio-hang">
@@ -191,45 +217,6 @@ const Header = ({ config }: HeaderProps) => {
           {wishlistItemCount > 0 && <span className="ml-1 text-xs">({wishlistItemCount})</span>}
         </Link>
       </Menu.Item>
-      <Menu.SubMenu key="user-mobile" title={<><UserOutlined className="mr-2" />Tài khoản</>}>
-        {isAuthLoading ? (
-          <Menu.Item key="loading-user-mobile" disabled>
-            <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} className="mr-2" />
-            Đang tải...
-          </Menu.Item>
-        ) : isLoggedInUI ? (
-          <>
-            <Menu.Item key="account-mobile-link">
-              <Link href="/tai-khoan">
-                Tài khoản
-              </Link>
-            </Menu.Item>
-            {isAdmin && (
-              <Menu.Item key="admin-mobile-link">
-                <Link href="/admin">
-                  Bảng điều khiển Admin
-                </Link>
-              </Menu.Item>
-            )}
-            <Menu.Item key="logout-mobile" onClick={handleLogout}>
-              {isLogoutPending ? (
-                <span>
-                  <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} className="mr-2" />
-                  Đăng xuất
-                </span>
-              ) : (
-                'Đăng xuất'
-              )}
-            </Menu.Item>
-          </>
-        ) : (
-          <Menu.Item key="login-mobile-link">
-            <Link href="/login">
-              Đăng nhập
-            </Link>
-          </Menu.Item>
-        )}
-      </Menu.SubMenu>
     </Menu>
   );
 
@@ -241,6 +228,15 @@ const Header = ({ config }: HeaderProps) => {
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
+      {/* New Top Horizontal Bar - Hidden on mobile */}
+      <div className="hidden md:flex h-8 bg-gray-100 items-center justify-end pr-8 pl-4 text-sm">
+        <div className="space-x-4">
+          <Link href="/gioi-thieu" className="text-gray-600 hover:text-blue-500 transition-colors duration-200">Giới thiệu</Link>
+          <Link href="/tin-tuc" className="text-gray-600 hover:text-blue-500 transition-colors duration-200">Tin tức</Link>
+          <Link href="/lien-he" className="text-gray-600 hover:text-blue-500 transition-colors duration-200">Liên hệ</Link>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between h-16 lg:px-12 md:px-8 p-4 container mx-auto">
         <Link href="/" className="flex items-center">
           {config.logo ? (
@@ -265,35 +261,49 @@ const Header = ({ config }: HeaderProps) => {
             className="flex-grow justify-center border-none"
             selectedKeys={getSelectedKey}
           >
-            {navigationItemsConfig.map((item) => {
-              if (item.hasDropdown) {
-                const dropdownMenu = productCategoriesMenu;
+        
+
+            {isLoadingAllCategories ? (
+              <Menu.Item key="loading-categories" disabled>
+                <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} className="mr-2" />
+                Đang tải danh mục...
+              </Menu.Item>
+            ) : (
+              categoriesTree.map((category) => {
+                if (category.children && category.children.length > 0) {
+                  return (
+                    <Menu.SubMenu
+                      key={`cat-${category.id}`}
+                      title={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span className='font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200'>{category.title}</span>
+                          {/* FIX: Adjusted vertical alignment for the DownOutlined icon */}
+                          <svg viewBox="64 64 896 896" focusable="false" data-icon="down" width="1em" height="1em" fill="currentColor" aria-hidden="true" style={{ fontSize: '12px', verticalAlign: 'middle' }}><path d="M884 256h-75c-5.1 0-9.9 2.1-13.3 5.7l-35.4 37.5L474 654.7c-3.6 3.6-8.4 5.7-13.3 5.7H456c-4.9 0-9.7-2.1-13.3-5.7L154 300.9l-35.4-37.5c-3.4-3.6-8.2-5.7-13.3-5.7H75c-6.8 0-10.5 8.1-6.1 13.5l356 397.6c3.6 4 8.6 6.5 13.9 6.5h38c5.3 0 10.3-2.5 13.9-6.5l356-397.6c4.4-5.4.7-13.5-6.1-13.5z"></path></svg>
+                        </div>
+                      }
+                      className="!px-4 !py-2 !h-auto"
+                    >
+                      {/* Link to parent category (e.g., all products in that category) */}
+                      <Menu.Item key={`cat-${category.id}-all`}>
+                        <Link href={`/${category.slug}`}>Tất cả {category.title}</Link>
+                      </Menu.Item>
+                      {category.children.map((subCategory) => (
+                        <Menu.Item key={`subcat-${subCategory.id}`}>
+                          <Link href={`/${subCategory.slug}`}>{subCategory.title}</Link>
+                        </Menu.Item>
+                      ))}
+                    </Menu.SubMenu>
+                  );
+                }
                 return (
-                  <Menu.SubMenu
-                    key={item.key}
-                    title={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span className='font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200'>{item.label}</span>
-                        <DownOutlined style={{ fontSize: '12px' }} />
-                      </div>
-                    }
-                    className="!px-4 !py-2 !h-auto"
-                  >
-                    <Menu.Item key={`${item.key}-all`}>
-                      <Link href={item.href}>Tất cả</Link>
-                    </Menu.Item>
-                    {dropdownMenu.props.children}
-                  </Menu.SubMenu>
+                  <Menu.Item key={`cat-${category.id}`} className="!px-4 !py-2 !h-auto">
+                    <Link href={`/${category.slug}`} className="font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                      {category.title}
+                    </Link>
+                  </Menu.Item>
                 );
-              }
-              return (
-                <Menu.Item key={item.key} className="!px-4 !py-2 !h-auto">
-                  <Link href={item.href} className="font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                    {item.label}
-                  </Link>
-                </Menu.Item>
-              );
-            })}
+              })
+            )}
           </Menu>
         </div>
 

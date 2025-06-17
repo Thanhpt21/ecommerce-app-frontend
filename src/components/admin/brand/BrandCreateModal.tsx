@@ -21,9 +21,14 @@ export const BrandCreateModal = ({ open, onClose, refetch }: any) => {
   const onFinish = async (values: any) => {
     try {
       const file = fileList?.[0]?.originFileObj
-      if (!file) return message.error('Vui lòng chọn ảnh')
+       // Create a FormData object to send both text data and the file
+      const formData = new FormData();
+      formData.append('title', values.title); // Append the title field
+      if (file) {
+        formData.append('file', file); // Append the file under the key 'file' as expected by FileInterceptor
+      }
 
-      await mutateAsync({ title: values.title, file })
+      await mutateAsync(formData)
       message.success('Tạo thương hiệu thành công')
       onClose()
       form.resetFields()
