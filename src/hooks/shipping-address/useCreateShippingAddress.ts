@@ -5,7 +5,9 @@ import { CreateShippingAddressPayload } from '@/types/shipping-address.type';
 
 export const useCreateShippingAddress = () => {
   return useMutation({
-    mutationFn: async (data: CreateShippingAddressPayload & { userId: number }) => {
+    // Bỏ hẳn `& { userId: number }` ở đây.
+    // Vì CreateShippingAddressPayload đã được định nghĩa là không có userId.
+    mutationFn: async (data: CreateShippingAddressPayload) => {
       const res = await api.post('/shipping-address', data);
       return res.data;
     },

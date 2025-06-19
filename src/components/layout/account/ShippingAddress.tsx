@@ -108,6 +108,8 @@ const ShippingAddress: React.FC = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ShippingAddressType | null>(null);
 
+  console.log("user", currentUser)
+
   useEffect(() => {
     if (returnUrl && !isAddingNew && !editingAddress) {
       handleAddNew();
@@ -129,9 +131,13 @@ const ShippingAddress: React.FC = () => {
       isDefault?: boolean;
     }
   ) => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) {
+      message.error('Bạn cần đăng nhập để thêm địa chỉ.');
+      return;
+    }
+
     createAddress(
-      { ...newAddressData, userId: currentUser.id },
+      { ...newAddressData },
       {
         onSuccess: () => {
           message.success('Địa chỉ đã được thêm thành công!');
@@ -143,21 +149,28 @@ const ShippingAddress: React.FC = () => {
           });
         },
         onError: (error: any) => {
-          message.error('Thêm địa chỉ thất bại!');
+          message.error('Thêm địa chỉ thất bại! Vui lòng kiểm tra lại thông tin.');
           console.error('Error creating address:', error);
         },
       }
     );
   };
 
+  // This function now receives *only* the data fields for the address update
   const handleUpdateAddress = (
-    updatedAddressData: Omit<ShippingAddressType, 'userId' | 'createdAt' | 'updatedAt'> & {
+    addressId: number, // Explicitly pass the ID here
+    updatedAddressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & {
       isDefault?: boolean;
     }
   ) => {
-    if (!editingAddress?.id) return;
+    // The previous check for editingAddress?.id is now redundant here since addressId is directly passed
+    // if (!editingAddress?.id) return; 
+
     updateAddress(
-      { id: editingAddress.id, data: updatedAddressData },
+      {
+        id: addressId, // Use the directly passed addressId
+        data: updatedAddressData, // Pass the clean data object
+      },
       {
         onSuccess: () => {
           message.success('Địa chỉ đã được cập nhật thành công!');
@@ -176,6 +189,7 @@ const ShippingAddress: React.FC = () => {
       }
     );
   };
+
 
   const handleDelete = (id: number) => {
     Modal.confirm({
@@ -218,7 +232,8 @@ const ShippingAddress: React.FC = () => {
     }
   ) => {
     if (editingAddress) {
-      handleUpdateAddress({ ...formData, id: editingAddress.id });
+      // Call handleUpdateAddress with the ID and the formData
+      handleUpdateAddress(editingAddress.id, formData);
     } else {
       handleSaveNewAddress(formData);
     }

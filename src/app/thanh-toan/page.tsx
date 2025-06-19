@@ -125,7 +125,7 @@ const CheckoutPage = () => {
 
   if (orderCompleted) {
     return (
-      <div className="container mx-auto py-10 text-center">
+      <div className="container lg:p-12 mx-auto p-4 md:p-8">
         <Title level={2}>Đơn hàng đã được đặt thành công!</Title>
         <Text>Cảm ơn bạn đã đặt hàng.</Text>
         <div className="mt-4">
@@ -141,7 +141,7 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container lg:p-12 mx-auto p-4 md:p-8">
       <div className="mb-4">
         <Breadcrumb>
           <Breadcrumb.Item>

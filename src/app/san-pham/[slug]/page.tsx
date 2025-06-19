@@ -6,7 +6,7 @@ import { useVariants } from '@/hooks/variant/useVariants';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
-import { Card, Button, Typography, Tag, Space, Breadcrumb, Tabs, message } from 'antd';
+import { Card, Button, Typography, Tag, Space, Breadcrumb, Tabs, message, Tooltip, Badge } from 'antd';
 import { StarFilled, StarOutlined } from '@ant-design/icons';
 import { StarHalf } from 'lucide-react';
 import Link from 'next/link';
@@ -28,8 +28,10 @@ export default function ProductDetailPage() {
 
   const [currentData, setCurrentData] = useState<any>(null);
   const [isViewingProduct, setIsViewingProduct] = useState(true);
-  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<number  | null>(null);
+  const [sizeMessage, setSizeMessage] = useState('');
   const [mainImage, setMainImage] = useState<string | null>(null);
+
 
   const { addItem: addItemToCart } = useCart();
 
@@ -47,9 +49,16 @@ export default function ProductDetailPage() {
     if (currentData) {
       if (currentData.sizes && currentData.sizes.length > 0) {
         const defaultSize = currentData.sizes[0];
-        setSelectedSizeId(defaultSize?.id || null);
+         setSelectedSizeId(defaultSize?.id || null);
+        // Set initial message for the default selected size if applicable
+        if (defaultSize?.quantity !== undefined) {
+          setSizeMessage(`Size ${defaultSize.title} còn ${defaultSize.quantity} sản phẩm.`);
+        } else {
+          setSizeMessage(''); // Clear message if quantity is not available
+        }
       } else {
         setSelectedSizeId(null);
+         setSizeMessage('');
       }
       setMainImage(currentData.thumb);
     }
@@ -62,6 +71,8 @@ export default function ProductDetailPage() {
       variantId: variant.id,
     });
     setIsViewingProduct(false);
+     setSelectedSizeId(null);
+    setSizeMessage('');
   };
 
   const resetToProduct = () => {
@@ -71,10 +82,13 @@ export default function ProductDetailPage() {
       variantId: undefined,
     });
     setIsViewingProduct(true);
+     setSelectedSizeId(null);
+    setSizeMessage('');
   };
 
-  const handleSelectSize = (sizeId: string) => {
+  const handleSelectSize = (sizeId: number, quantity: number, sizeTitle: string) => { // Tham số sizeId là number
     setSelectedSizeId(sizeId);
+    setSizeMessage(`Size ${sizeTitle} còn ${quantity} sản phẩm.`);
   };
 
   const handleThumbnailClick = (imgUrl: string) => {
@@ -92,7 +106,7 @@ export default function ProductDetailPage() {
       return null;
     }
 
-    const selectedSize = currentData?.sizes?.find((s: { id: string; title: string }) => s.id === selectedSizeId);
+    const selectedSize = currentData?.sizes?.find((s: { id: number; title: string; quantity: number }) => s.id === selectedSizeId);
 
     const itemProductId = Number(currentData.productId);
 
@@ -138,6 +152,7 @@ export default function ProductDetailPage() {
     const fullStars = Math.floor(averageRating);
     const hasHalfStar = averageRating % 1 !== 0;
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
 
     return (
       <div className="flex items-center space-x-1 text-yellow-500">
@@ -270,22 +285,31 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="mb-6">
-            <Title level={5} className="font-semibold mb-2">Kích thước:</Title>
+            <Title level={5} className="font-semibold mb-2">
+              Kích thước:
+            </Title>
             <div className="flex flex-wrap gap-2">
               {(currentData?.sizes || []).map((item: any) => {
                 const sizeId = item.id;
                 const sizeTitle = item.title;
+                const quantity = item.quantity; // Lấy quantity từ item
+
                 return (
                   <div
                     key={sizeId}
-                    onClick={() => handleSelectSize(sizeId)}
-                    className={`cursor-pointer px-3 py-1 text-sm rounded-md border ${selectedSizeId === sizeId ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+                    onClick={() => handleSelectSize(sizeId, quantity, sizeTitle)} // Truyền quantity vào handleSelectSize
+                    className={`cursor-pointer px-3 py-1 text-sm rounded-md border ${
+                      selectedSizeId === sizeId
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
                   >
                     {sizeTitle}
                   </div>
                 );
               })}
             </div>
+            {sizeMessage && <p className="mt-2 text-sm text-gray-600">{sizeMessage}</p>}
           </div>
 
           <Button type="primary" size="large" className="w-fit" onClick={handleAddToCart}>
