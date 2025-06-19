@@ -12,16 +12,22 @@ export interface Variant {
   updatedAt?: string; // Thêm updatedAt
   productId?: number; // Thêm productId
   colorId?: number;
-  color?: {
-    id: number;
-    title: string;
-    code: string;
-  };
-  sizes?: {
-    id: number;
-    title: string;
-  }[];
-  quantity?: number;
+  color?: Color;
+  sizes?: VariantSizeDetail[];
+}
+
+export interface Color {
+  id: number;
+  title: string;
+  code: string;
+  // ... other Color properties
+}
+
+export interface VariantSizeDetail {
+    variantId: number; // ID của biến thể mà kích thước này thuộc về
+    sizeId: number;    // ID của kích thước (ví dụ: ID của 'S', 'M', 'L')
+    title: string;     // Tên của kích thước (ví dụ: 'S', 'M', 'L')
+    quantity: number;  // Số lượng biến thể có kích thước này
 }
 
 

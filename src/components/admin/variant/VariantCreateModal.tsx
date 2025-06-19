@@ -11,16 +11,22 @@ import {
     Checkbox,
     Row,
     Col,
+    InputNumber,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { useCreateVariant } from '@/hooks/variant/useCreateVariant';
 
+interface SelectedVariantSize {
+    sizeId: number;
+    quantity: number;
+}
+
 interface VariantCreateModalProps {
     open: boolean;
     onClose: () => void;
     refetch?: () => void;
-    productId?: string; // Nhận productId từ trang cha
+    productId?: string; // Changed to number as per backend DTO
     colors: { id: number; title: string }[];
     sizes: { id: number; title: string }[];
 }
@@ -38,6 +44,60 @@ export const VariantCreateModal = ({
     const [imagesFileList, setImagesFileList] = useState<any[]>([]);
     const { mutateAsync, isPending } = useCreateVariant();
 
+    const [selectedVariantSizes, setSelectedVariantSizes] = useState<SelectedVariantSize[]>([]);
+
+    // Reset form fields and state when modal closes
+    useEffect(() => {
+        if (!open) {
+            form.resetFields();
+            setThumbFileList([]);
+            setImagesFileList([]);
+            setSelectedVariantSizes([]); // ⭐ RESET NEW STATE ⭐
+        }
+    }, [open, form]);
+
+    // ⭐ NEW LOGIC: Handle size checkbox changes ⭐
+    const onSizeCheckboxChange = (checkedValues: any[]) => {
+        const newSelectedVariantSizes: SelectedVariantSize[] = checkedValues.map((sizeId: number) => {
+            // Keep existing quantity if sizeId was already selected, otherwise default to 0
+            const existing = selectedVariantSizes.find(vs => vs.sizeId === sizeId);
+            return { sizeId, quantity: existing ? existing.quantity : 0 };
+        });
+
+        // Filter out sizes that are no longer checked
+        const finalSelectedVariantSizes = selectedVariantSizes.filter(vs =>
+            checkedValues.includes(vs.sizeId)
+        );
+
+        // Add newly checked sizes
+        newSelectedVariantSizes.forEach((newVs) => {
+            if (!finalSelectedVariantSizes.some(vs => vs.sizeId === newVs.sizeId)) {
+                finalSelectedVariantSizes.push(newVs);
+            }
+        });
+
+        setSelectedVariantSizes(finalSelectedVariantSizes);
+        // ⭐ Update form field so Ant Design form context knows about these values ⭐
+        // This is crucial for `values.variantSizes` in `onFinish`
+        form.setFieldsValue({ variantSizes: finalSelectedVariantSizes });
+    };
+
+    // ⭐ NEW LOGIC: Handle quantity changes for a specific size ⭐
+    const onQuantityChange = (sizeId: number, value: number | null) => {
+        setSelectedVariantSizes(prev =>
+            prev.map(vs =>
+                vs.sizeId === sizeId ? { ...vs, quantity: value !== null ? value : 0 } : vs
+            )
+        );
+        // ⭐ Update form field to reflect the quantity change ⭐
+        form.setFieldsValue({
+            variantSizes: selectedVariantSizes.map(vs => ({
+                ...vs,
+                quantity: vs.sizeId === sizeId ? (value !== null ? value : 0) : vs.quantity
+            }))
+        });
+    };
+
     const onFinish = async (values: any) => {
         try {
             const thumbFile = thumbFileList?.[0]?.originFileObj;
@@ -54,13 +114,16 @@ export const VariantCreateModal = ({
                 formData.append('colorId', values.colorId);
             }
             formData.append('price', values.price);
-            if (values.discount) {
-                formData.append('discount', values.discount);
+              if (values.discount !== undefined && values.discount !== null && values.discount !== '') {
+                formData.append('discount', values.discount.toString()); // Convert discount to string
+            } else {
+                formData.append('discount', '0'); // Default to 0 if not provided
             }
-            // Bỏ formData.append('sku', values.sku);
-            if (values.sizeIds) {
-                formData.append('sizeIds', JSON.stringify(values.sizeIds));
+            // ⭐ NEW LOGIC: Append variantSizes as a JSON string to FormData ⭐
+            if (selectedVariantSizes.length > 0) {
+                formData.append('variantSizes', JSON.stringify(selectedVariantSizes));
             }
+
             formData.append('thumb', thumbFile);
             imagesFiles.forEach(imageFile => {
                 formData.append('images', imageFile);
@@ -72,19 +135,14 @@ export const VariantCreateModal = ({
             form.resetFields();
             setThumbFileList([]);
             setImagesFileList([]);
+            setSelectedVariantSizes([]);
             refetch?.();
         } catch (err: any) {
             message.error(err?.response?.data?.message || 'Lỗi tạo biến thể');
         }
     };
 
-    useEffect(() => {
-        if (!open) {
-            form.resetFields();
-            setThumbFileList([]);
-            setImagesFileList([]);
-        }
-    }, [open, form]);
+
 
     const uploadButton = <Button icon={<UploadOutlined />}>Chọn ảnh</Button>;
 
@@ -154,25 +212,46 @@ export const VariantCreateModal = ({
                             name="price"
                             rules={[{ required: true, message: 'Vui lòng nhập giá' }]}
                         >
-                            <Input type="number" min={0} />
+                            <InputNumber 
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                                 type="number" 
+                                 min={0} />
                         </Form.Item>
                     </Col>
                     <Col span={12}>
                         <Form.Item label="Giảm giá" name="discount">
-                            <Input type="number" min={0} />
+                            <InputNumber
+                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                            type="number" min={0} />
                         </Form.Item>
                     </Col>
                 </Row>
 
               
 
-                <Form.Item label="Kích thước" name="sizeIds">
-                    <Checkbox.Group>
-                        {sizes.map((size) => (
-                            <Checkbox key={size.id} value={size.id}>
-                                {size.title}
-                            </Checkbox>
-                        ))}
+                <Form.Item label="Kích thước & Số lượng" name="variantSizes"> {/* `name` here is for Ant Design form context */}
+                    <Checkbox.Group onChange={onSizeCheckboxChange} value={selectedVariantSizes.map(vs => vs.sizeId)}>
+                        <Row gutter={[16, 16]}>
+                            {sizes.map((size) => (
+                                <Col span={8} key={size.id}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <Checkbox value={size.id}>{size.title}</Checkbox>
+                                        {selectedVariantSizes.some(vs => vs.sizeId === size.id) && (
+                                            <InputNumber
+                                                min={0}
+                                                placeholder="SL"
+                                                style={{ width: 80 }}
+                                                value={selectedVariantSizes.find(vs => vs.sizeId === size.id)?.quantity ?? 0}
+                                                onChange={(value) => onQuantityChange(size.id, value)}
+                                                onClick={e => e.stopPropagation()} // Prevent closing dropdown/propagating click
+                                            />
+                                        )}
+                                    </div>
+                                </Col>
+                            ))}
+                        </Row>
                     </Checkbox.Group>
                 </Form.Item>
 

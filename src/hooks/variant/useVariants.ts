@@ -1,7 +1,7 @@
 // src/hooks/variant/useVariants.ts
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/axios';
-import { Variant } from '@/types/product.type'; // Đảm bảo bạn có interface Variant
+import { Variant } from '@/types/variant.type';
 
 interface UseVariantsParams {
   page?: number;

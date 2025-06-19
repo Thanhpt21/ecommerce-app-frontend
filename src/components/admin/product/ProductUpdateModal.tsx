@@ -16,10 +16,12 @@ import {
 import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState, useMemo } from 'react'; // Import useMemo
 import { useUpdateProduct } from '@/hooks/product/useUpdateProduct';
-import { ProductUpdateModalProps as OriginalProductUpdateModalProps, ProductUpdateModalProps } from '@/types/product.type'; // Import Original type
+import { ProductUpdateModalProps as OriginalProductUpdateModalProps, ProductSizeDetail, ProductUpdateModalProps } from '@/types/product.type'; // Import Original type
 import DynamicRichTextEditor from '@/components/common/RichTextEditor';
 import { Category } from '@/types/category.type'; // Ensure Category type is imported
 import { useProductSizes } from '@/hooks/product-sizes/useProductSizes';
+import { WeightUnit } from '@/enums/product.enums';
+import { useQueryClient } from '@tanstack/react-query';
 
 
 
@@ -42,7 +44,14 @@ export const ProductUpdateModal = ({
     // State để lưu trữ ID của danh mục cha được chọn
     const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<number | null>(null);
 
-    const { data: selectedSizes, isLoading: isSizesLoading, error: sizesError } = useProductSizes(product?.id);
+    const { data: fetchedProductSizes, isLoading: isSizesLoading, error: sizesError } = useProductSizes(product?.id);
+
+        // State để theo dõi các size đã chọn và số lượng của chúng
+    const [selectedProductSizes, setSelectedProductSizes] = useState<{ sizeId: number; quantity: number }[]>([]);
+
+        console.log("aa", fetchedProductSizes);
+
+    const queryClient = useQueryClient(); // Initialize queryClient
 
     // Reset form fields và state khi modal đóng hoặc khi product thay đổi
     useEffect(() => {
@@ -52,6 +61,7 @@ export const ProductUpdateModal = ({
             setImagesFileList([]);
             setDescription('');
             setSelectedParentCategoryId(null); // Reset selected parent category
+            setSelectedProductSizes([]); // Reset state
         } else if (product && open) {
             // Xác định danh mục cha và con ban đầu
             const currentCategory = categories.find(cat => cat.id === product.categoryId);
@@ -84,7 +94,10 @@ export const ProductUpdateModal = ({
                 // slug: product.slug, // REMOVED SLUG FIELD
                 parentCategoryId: initialParentCategoryId, // Set initial parent category
                 subCategoryId: initialSubCategoryId, // Set initial sub category
-                description : product.description
+                description : product.description,
+                weight: product.weight,
+                weightUnit: product.weightUnit,
+                unit: product.unit,
             });
             setDescription(product.description || '');
             setSelectedParentCategoryId(initialParentCategoryId); // Set state for dynamic sub-category loading
@@ -105,14 +118,22 @@ export const ProductUpdateModal = ({
         }
     }, [product, open, form, categories]); // Add categories to dependency array
 
+   // EFFECT RIÊNG ĐỂ XỬ LÝ KHI DỮ LIỆU SIZE ĐƯỢC FETCH
     useEffect(() => {
-        if (selectedSizes && open) {
-            const initialSizeIds = selectedSizes.map((size) => size.id);
+        if (open && fetchedProductSizes) {
+            const initialProductSizes = fetchedProductSizes.map((ps: ProductSizeDetail) => ({
+                sizeId: ps.sizeId,
+                quantity: ps.quantity,
+            }));
+            setSelectedProductSizes(initialProductSizes);
+
+            const checkedSizeIds = initialProductSizes.map(ps => ps.sizeId);
+
             form.setFieldsValue({
-                sizeIds: initialSizeIds,
+                productSizes: checkedSizeIds,
             });
         }
-    }, [selectedSizes, open, form]);
+    }, [open, fetchedProductSizes, form]);
 
     // Lọc ra các danh mục cha (parentId là null) để hiển thị trong Select đầu tiên
     const parentCategories = useMemo(() => {
@@ -126,6 +147,33 @@ export const ProductUpdateModal = ({
         }
         return categories.filter(cat => cat.parentId === selectedParentCategoryId);
     }, [categories, selectedParentCategoryId]);
+
+     // Hàm xử lý thay đổi checkbox size
+    const onSizeCheckboxChange = (checkedValues: any) => {
+        const checkedSizeIds = checkedValues.map(Number);
+
+        // Tạo mảng selectedProductSizes mới dựa trên các size đã được chọn
+        const newSelectedProductSizes = checkedSizeIds.map((sizeId: number) => {
+            const existing = selectedProductSizes.find(ps => ps.sizeId === sizeId);
+            // Giữ lại quantity nếu đã tồn tại, nếu không thì mặc định là 0
+            return { sizeId, quantity: existing ? existing.quantity : 0 };
+        });
+
+        setSelectedProductSizes(newSelectedProductSizes);
+        // Không cần set form value cho productSizes ở đây vì Checkbox.Group đã tự quản lý
+    };
+
+    // Hàm xử lý thay đổi số lượng cho một size cụ thể
+    const onQuantityChange = (sizeId: number, value: number | null) => {
+        setSelectedProductSizes(prev =>
+            prev.map(ps =>
+                ps.sizeId === sizeId ? { ...ps, quantity: value !== null ? value : 0 } : ps
+            )
+        );
+        // Lưu ý: Không cần cập nhật form field cho productSizes ở đây.
+        // Giá trị của InputNumber được điều khiển bởi state `selectedProductSizes`
+        // và `onFinish` sẽ lấy trực tiếp từ `selectedProductSizes`.
+    };
 
     const onFinish = async (values: any) => {
         try {
@@ -150,13 +198,8 @@ export const ProductUpdateModal = ({
                     formData.append('tags[]', tag); // Append each tag individually
                 });
             }
-            if (values.sizeIds && values.sizeIds.length > 0) {
-                values.sizeIds.forEach((sizeId: number) => { // Đảm bảo 'id' có kiểu là number
-                    // Thêm từng sizeId dưới dạng một trường 'sizeIds[]' riêng biệt
-                    formData.append('sizeIds[]', sizeId.toString()); // Chuyển số thành chuỗi để FormData xử lý
-                });
-            } else {
-                // Ví dụ: formData.append('sizeIds[]', ''); // Nếu backend cực kỳ nghiêm ngặt
+              if (selectedProductSizes.length > 0) {
+                formData.append('productSizes', JSON.stringify(selectedProductSizes));
             }
             formData.append('brandId', values.brandId);
             formData.append('colorId', values.colorId);
@@ -193,6 +236,16 @@ export const ProductUpdateModal = ({
                 formData.append('images', imageFile);
             });
 
+             if (values.weight !== undefined && values.weight !== null) {
+                formData.append('weight', values.weight.toString());
+            }
+            if (values.weightUnit) {
+                formData.append('weightUnit', values.weightUnit);
+            }
+            if (values.unit) {
+                formData.append('unit', values.unit);
+            }
+
             if (!product) {
                 message.error('Không tìm thấy sản phẩm để cập nhật');
                 return;
@@ -201,6 +254,7 @@ export const ProductUpdateModal = ({
             message.success('Cập nhật sản phẩm thành công');
             onClose();
             refetch?.();
+            queryClient.invalidateQueries({ queryKey: ['productSizes', product.id] });
         } catch (err: any) {
             message.error(err?.response?.data?.message || 'Lỗi cập nhật sản phẩm');
         }
@@ -307,13 +361,31 @@ export const ProductUpdateModal = ({
                 </Form.Item>
                 <Row gutter={16}>
                     <Col span={12}> {/* Sizes */}
-                        <Form.Item label="Kích thước" name="sizeIds">
-                            <Checkbox.Group>
-                                {sizes.map((size) => (
-                                    <Checkbox key={size.id} value={size.id}>
-                                        {size.title}
-                                    </Checkbox>
-                                ))}
+                        <Form.Item label="Kích thước & Số lượng" name="productSizes">
+                            <Checkbox.Group
+                                onChange={onSizeCheckboxChange}
+                                // ✨ THÊM DÒNG NÀY ĐỂ TRUYỀN GIÁ TRỊ TRỰC TIẾP CHO CHECKBOX.GROUP ✨
+                                value={selectedProductSizes.map(ps => ps.sizeId)}
+                            >
+                                <Row gutter={[16, 16]}>
+                                    {sizes.map((size) => (
+                                        <Col span={8} key={Number(size.id)}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <Checkbox value={Number(size.id)}>{size.title}</Checkbox>
+                                                {selectedProductSizes.some(ps => ps.sizeId === Number(size.id)) && (
+                                                    <InputNumber
+                                                        min={0}
+                                                        placeholder="SL"
+                                                        style={{ width: 80 }}
+                                                        value={selectedProductSizes.find(ps => ps.sizeId === Number(size.id))?.quantity ?? 0}
+                                                        onChange={(value) => onQuantityChange(Number(size.id), value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                )}
+                                            </div>
+                                        </Col>
+                                    ))}
+                                </Row>
                             </Checkbox.Group>
                         </Form.Item>
                     </Col>
@@ -349,6 +421,40 @@ export const ProductUpdateModal = ({
                                     </Select.Option>
                                 ))}
                             </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item label="Khối lượng" name="weight">
+                            <InputNumber
+                                min={0}
+                                step={0.01} // Allow decimal values for weight
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                                style={{ width: '100%' }}
+                                placeholder="Nhập khối lượng"
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item label="Đơn vị khối lượng" name="weightUnit">
+                            <Select placeholder="Chọn đơn vị">
+                                {Object.values(WeightUnit).map((unit) => (
+                                    <Select.Option key={unit} value={unit}>
+                                        {unit}
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item label="Đơn vị tính" name="unit">
+                            <Input placeholder="Ví dụ: cái, hộp, bộ" />
                         </Form.Item>
                     </Col>
                 </Row>

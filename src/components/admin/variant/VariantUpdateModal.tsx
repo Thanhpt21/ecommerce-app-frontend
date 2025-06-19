@@ -11,12 +11,14 @@ import {
     Checkbox,
     Row,
     Col,
+    InputNumber,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useUpdateVariant } from '@/hooks/variant/useUpdateVariant';
-import { VariantUpdateModalProps, Variant } from '@/types/variant.type'; // Import Variant type
+import { VariantUpdateModalProps, Variant, VariantSizeDetail, Color } from '@/types/variant.type'; // Import Color và VariantSize types
 import { useVariantSizes } from '@/hooks/variant-sizes/useVariantSizes';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const VariantUpdateModal = ({
     open,
@@ -24,24 +26,31 @@ export const VariantUpdateModal = ({
     variant,
     refetch,
     colors,
-    sizes: allSizes,
+    sizes: allSizes, // allSizes should be Size[]
     productId: propProductId,
 }: VariantUpdateModalProps) => {
     const [form] = Form.useForm();
     const [thumbFileList, setThumbFileList] = useState<any[]>([]);
     const [imagesFileList, setImagesFileList] = useState<any[]>([]);
     const { mutateAsync, isPending } = useUpdateVariant();
-    const { data: selectedSizes, isLoading: isSizesLoading, error: sizesError } = useVariantSizes(variant?.id);
-    const productId = propProductId; // Sử dụng productId prop nếu có
+
+    // Lấy dữ liệu VariantSizes, đổi tên biến để dễ phân biệt
+    const { data: fetchedVariantSizesResponse, isLoading: isSizesLoading, error: sizesError } = useVariantSizes(variant?.id);
+    const productId = propProductId;
+
+    // State để lưu trữ các size đã chọn và số lượng của chúng
+    const [selectedVariantSizes, setSelectedVariantSizes] = useState<{ sizeId: number; quantity: number }[]>([]);
+    const queryClient = useQueryClient();
+
+
 
     useEffect(() => {
         if (variant && open) {
             form.setFieldsValue({
-                title: variant.title, // Thêm dòng này
-                price: variant.price,
-                discount: variant.discount,
+                title: variant.title,
+                price: variant.price ?? 0,
+                discount: variant.discount ?? 0,
                 colorId: variant.colorId,
-                // sizeIds sẽ được set sau khi selectedSizes load xong
             });
             setThumbFileList(
                 variant.thumb
@@ -60,17 +69,47 @@ export const VariantUpdateModal = ({
             form.resetFields();
             setThumbFileList([]);
             setImagesFileList([]);
+            setSelectedVariantSizes([]);
         }
     }, [variant, open, form]);
 
     useEffect(() => {
-        if (selectedSizes && open) {
-            const initialSizeIds = selectedSizes.map((size) => size.id); // Giả sử sizeId trong response
+        // Kiểm tra fetchedVariantSizesResponse và data bên trong
+        if (open && fetchedVariantSizesResponse?.data) {
+            // Ép kiểu `vs` thành `VariantSize` để TypeScript nhận diện
+            const initialVariantSizes = fetchedVariantSizesResponse.data.map((vs: VariantSizeDetail) => ({
+                sizeId: vs.sizeId, // SỬA: Lấy vs.sizeId, đây là ID của kích thước thực tế (S, M, L)
+                quantity: vs.quantity,
+            }));
+            setSelectedVariantSizes(initialVariantSizes);
+
+            const checkedSizeIds = initialVariantSizes.map(vs => vs.sizeId);
             form.setFieldsValue({
-                sizeIds: initialSizeIds,
+                variantSizeQuantities: checkedSizeIds,
             });
         }
-    }, [selectedSizes, open, form]);
+    }, [open, fetchedVariantSizesResponse, form]); // Thêm fetchedVariantSizesResponse vào dependency array
+
+    // Hàm xử lý thay đổi checkbox size
+    const onSizeCheckboxChange = (checkedValues: any[]) => {
+        const checkedSizeIds = checkedValues.map(Number); // Đảm bảo ID là kiểu số
+
+        const newSelectedVariantSizes = checkedSizeIds.map((sizeId: number) => {
+            const existing = selectedVariantSizes.find(vs => vs.sizeId === sizeId);
+            return { sizeId, quantity: existing ? existing.quantity : 0 };
+        });
+
+        setSelectedVariantSizes(newSelectedVariantSizes);
+    };
+
+    // Hàm xử lý thay đổi số lượng cho một size cụ thể
+    const onQuantityChange = (sizeId: number, value: number | null) => {
+        setSelectedVariantSizes(prev =>
+            prev.map(vs =>
+                vs.sizeId === sizeId ? { ...vs, quantity: value !== null ? value : 0 } : vs
+            )
+        );
+    };
 
     const onFinish = async (values: any) => {
         try {
@@ -79,27 +118,28 @@ export const VariantUpdateModal = ({
 
             const formData = new FormData();
 
-            if (productId) {
-                formData.append('productId', productId);
+
+            formData.append('title', values.title);
+            formData.append('price', values.price.toString());
+            if (values.discount !== undefined && values.discount !== null && values.discount !== '') {
+                formData.append('discount', values.discount.toString());
+            } else {
+                formData.append('discount', '0');
             }
-            formData.append('title', values.title); // Thêm title vào formData
-            formData.append('price', values.price);
-            if (values.discount !== undefined) {
-                formData.append('discount', values.discount);
-            }
-            if (values.colorId !== undefined) {
-                formData.append('colorId', values.colorId);
-            }
-            if (values.sizeIds) {
-                formData.append('sizeIds', JSON.stringify(values.sizeIds));
+            if (values.colorId !== undefined && values.colorId !== null) {
+                formData.append('colorId', values.colorId.toString());
             }
 
-            // Append file thumb nếu có file mới được chọn
+            if (selectedVariantSizes.length > 0) {
+                formData.append('variantSizes', JSON.stringify(selectedVariantSizes));
+            } else {
+                formData.append('variantSizes', '[]');
+            }
+
             if (thumbFile) {
                 formData.append('thumb', thumbFile);
             }
 
-            // Append các file images mới
             imagesFiles.forEach(imageFile => {
                 formData.append('images', imageFile);
             });
@@ -112,7 +152,11 @@ export const VariantUpdateModal = ({
             message.success('Cập nhật biến thể thành công');
             onClose();
             refetch?.();
+            queryClient.invalidateQueries({ queryKey: ['variantSizes', variant.id] });
+            queryClient.invalidateQueries({ queryKey: ['variants'] });
+
         } catch (err: any) {
+            console.error('Lỗi khi cập nhật biến thể:', err);
             message.error(err?.response?.data?.message || 'Lỗi cập nhật biến thể');
         }
     };
@@ -122,15 +166,13 @@ export const VariantUpdateModal = ({
     return (
         <Modal
             title="Cập nhật biến thể"
-            visible={open}
+            visible={open} // Correct Ant Design v5+ prop
             onCancel={onClose}
             footer={null}
             destroyOnClose
             width={700}
         >
             <Form form={form} layout="vertical" onFinish={onFinish}>
-      
-
                 <Form.Item label="Ảnh đại diện">
                     <Upload
                         listType="picture-card"
@@ -155,7 +197,8 @@ export const VariantUpdateModal = ({
                         {imagesFileList.length >= 10 ? null : uploadButton}
                     </Upload>
                 </Form.Item>
-          <Row gutter={16}>
+
+                <Row gutter={16}>
                     <Col span={12}>
                         <Form.Item
                             label="Tiêu đề biến thể"
@@ -165,9 +208,9 @@ export const VariantUpdateModal = ({
                             <Input />
                         </Form.Item>
                     </Col>
-                     <Col span={12}>
+                    <Col span={12}>
                         <Form.Item label="Màu sắc" name="colorId">
-                            <Select placeholder="Chọn màu sắc">
+                            <Select placeholder="Chọn màu sắc" allowClear>
                                 {colors.map((color) => (
                                     <Select.Option key={color.id} value={color.id}>
                                         {color.title}
@@ -178,33 +221,58 @@ export const VariantUpdateModal = ({
                     </Col>
                 </Row>
                 <Row gutter={16}>
-                    <Col span={12}>
+                     <Col span={12}>
                         <Form.Item
                             label="Giá"
                             name="price"
                             rules={[{ required: true, message: 'Vui lòng nhập giá' }]}
                         >
-                            <Input type="number" min={0} />
+                            <InputNumber
+                                min={0}
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                                style={{ width: '100%' }}
+                            />
                         </Form.Item>
                     </Col>
                     <Col span={12}>
-                        <Form.Item label="Giảm giá" name="discount">
-                            <Input type="number" min={0} />
+                        <Form.Item label="Giảm giá (đ)" name="discount">
+                           <InputNumber
+                                min={0}
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                                style={{ width: '100%' }}
+                            />
                         </Form.Item>
                     </Col>
                 </Row>
 
-
-                <Form.Item label="Kích thước" name="sizeIds">
-                    <Checkbox.Group>
-                        {allSizes.map((size) => (
-                            <Checkbox key={size.id} value={size.id}>
-                                {size.title}
-                            </Checkbox>
-                        ))}
+                <Form.Item label="Kích thước & Số lượng" name="variantSizeQuantities">
+                    <Checkbox.Group
+                        onChange={onSizeCheckboxChange}
+                        value={selectedVariantSizes.map(vs => vs.sizeId)}
+                    >
+                        <Row gutter={[16, 16]}>
+                            {allSizes.map((size) => (
+                                <Col span={8} key={size.id}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <Checkbox value={size.id}>{size.title}</Checkbox>
+                                        {selectedVariantSizes.some(vs => vs.sizeId === size.id) && (
+                                            <InputNumber
+                                                min={0}
+                                                placeholder="SL"
+                                                style={{ width: 80 }}
+                                                value={selectedVariantSizes.find(vs => vs.sizeId === size.id)?.quantity ?? 0}
+                                                onChange={(value) => onQuantityChange(size.id, value)}
+                                                onClick={e => e.stopPropagation()}
+                                            />
+                                        )}
+                                    </div>
+                                </Col>
+                            ))}
+                        </Row>
                     </Checkbox.Group>
                 </Form.Item>
-
 
                 <Form.Item>
                     <Button type="primary" htmlType="submit" loading={isPending} block>

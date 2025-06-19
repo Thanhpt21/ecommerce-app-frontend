@@ -1,3 +1,6 @@
+import { WeightUnit } from "@/enums/product.enums";
+import { Variant } from "./variant.type";
+
 export interface Product {
   id: number;
   title: string;
@@ -25,6 +28,9 @@ export interface Product {
   variants: Variant[]; // Assuming you have a Variant interface
   ratings: Rating[]; // Assuming you have a Rating interface
   OrderItem: OrderItem[]; // Assuming you have an OrderItem interface
+  weight?: number | null; // Khối lượng sản phẩm
+  weightUnit?: WeightUnit | null; // Đơn vị khối lượng (ví dụ: 'kg', 'gram')
+  unit?: string | null; // Đơn vị tính (ví dụ: 'cái', 'hộp')
 }
 
 // Assuming you have these interfaces as well:
@@ -56,32 +62,10 @@ export interface Color {
 export interface ProductSize {
   productId: number;
   sizeId: number;
-  // Có thể có thêm các thuộc tính khác nếu cần
+  quantity: number
 }
 
 
-export interface Variant {
-  id: number;
-  title?: string; // Thêm title
-  price: number;
-  discount?: number;
-  thumb: string;
-  images: string[];
-  sku: string; // Thêm sku
-  createdAt?: string; // Thêm createdAt
-  updatedAt?: string; // Thêm updatedAt
-  productId?: number; // Thêm productId
-  colorId?: number;
-  color?: {
-    id: number;
-    title: string;
-    code: string;
-  };
-  sizes?: {
-    id: number;
-    title: string;
-  }[];
-}
 export interface Rating {
   id: number;
   star: number;
@@ -159,6 +143,9 @@ export interface ProductResponse {
     sizes: { id: number; title: string }[];
     color: { id: number; title: string; code: string };
   }[];
+  weight: number | null; // API có thể trả về null nếu không có
+  weightUnit: WeightUnit | null; // API có thể trả về null nếu không có
+  unit: string | null; // API có thể trả về null nếu không có
 }
 
 
@@ -171,6 +158,14 @@ export interface ProductsByCategorySlugResponse {
   page: number;
   pageCount: number;
   categoryInfo: Category | null; // Cần thêm trường này vào Category nếu chưa có
+}
+
+
+export interface ProductSizeDetail {
+    productId: number; // ID của sản phẩm mà kích thước này thuộc về
+    sizeId: number;    // ID của kích thước (ví dụ: ID của 'S', 'M', 'L')
+    title: string;     // Tên của kích thước (ví dụ: 'S', 'M', 'L')
+    quantity: number;  // Số lượng sản phẩm có kích thước này
 }
 
 

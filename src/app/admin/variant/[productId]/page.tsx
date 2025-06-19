@@ -24,7 +24,7 @@ export default function AdminVariantPage() {
     }, [product]);
 
     const handleBackToProduct = () => {
-        const backUrl = previousPage ? `/vi/admin/product?page=${previousPage}` : '/vi/admin/product';
+        const backUrl = previousPage ? `/admin/product?page=${previousPage}` : '/admin/product';
         router.push(backUrl);
     };
 
