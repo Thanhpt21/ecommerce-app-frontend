@@ -11,7 +11,7 @@ import {
 import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useUpdateConfig } from '@/hooks/config/useUpdateConfig';
-import { Config } from '@/types/config.type';
+import { Config } from '@/types/config.type'; // Đảm bảo type Config đã có 4 trường mới
 
 interface ConfigUpdateModalProps {
   open: boolean;
@@ -43,6 +43,12 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
         email: config.email,
         mobile: config.mobile,
         address: config.address,
+        // CẬP NHẬT useEffect ĐỂ SET GIÁ TRỊ CHO 4 TRƯỜNG MỚI
+        pick_province: config.pick_province,
+        pick_district: config.pick_district,
+        pick_ward: config.pick_ward,
+        pick_address: config.pick_address,
+        // KẾT THÚC CẬP NHẬT
         googlemap: config.googlemap,
         facebook: config.facebook,
         zalo: config.zalo,
@@ -65,7 +71,6 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
     const logoFile = logoFileList?.[0]?.originFileObj;
     onUpdate(values, logoFile);
   };
-
 
   return (
     <Modal
@@ -92,6 +97,23 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
         <Form.Item label="Địa chỉ" name="address">
           <Input />
         </Form.Item>
+
+        {/* THÊM CÁC FORM.ITEM CHO 4 TRƯỜNG ĐỊA CHỈ LẤY HÀNG MỚI */}
+        <h3>Thông tin địa chỉ lấy hàng mặc định</h3>
+        <Form.Item label="Tỉnh/Thành phố lấy hàng" name="pick_province">
+          <Input />
+        </Form.Item>
+        <Form.Item label="Quận/Huyện lấy hàng" name="pick_district">
+          <Input />
+        </Form.Item>
+        <Form.Item label="Phường/Xã lấy hàng" name="pick_ward">
+          <Input />
+        </Form.Item>
+        <Form.Item label="Địa chỉ chi tiết lấy hàng" name="pick_address">
+          <Input.TextArea rows={2} />
+        </Form.Item>
+        {/* KẾT THÚC THÊM CÁC TRƯỜNG MỚI */}
+
         <Form.Item label="Google Map" name="googlemap">
           <Input />
         </Form.Item>
@@ -118,7 +140,7 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
         </Form.Item>
 
         <Form.Item label="Logo">
-         <Upload
+          <Upload
             listType="picture"
             fileList={logoFileList}
             onChange={({ fileList }) => setLogoFileList(fileList)}

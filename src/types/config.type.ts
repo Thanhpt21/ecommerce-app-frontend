@@ -15,4 +15,8 @@ export interface Config {
   logo?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  pick_province?: string;
+  pick_district?: string;
+  pick_ward?: string;
+  pick_address?: string;
 }

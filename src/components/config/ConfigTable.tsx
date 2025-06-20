@@ -88,6 +88,18 @@ export default function ConfigTable() {
       key: 'address',
     },
     {
+      title: 'Địa chỉ Lấy Hàng Mặc Định',
+      key: 'pick_up_address', // Dùng một key mới cho cột gộp
+      render: (_, record) => { // Dùng render để kết hợp các trường
+        const parts = [];
+        if (record.pick_address) parts.push(record.pick_address);
+        if (record.pick_ward) parts.push(record.pick_ward);
+        if (record.pick_district) parts.push(record.pick_district);
+        if (record.pick_province) parts.push(record.pick_province);
+        return parts.length > 0 ? parts.join(', ') : 'Chưa có';
+      },
+    },
+    {
       title: 'Hành động',
       key: 'action',
       render: () => (
