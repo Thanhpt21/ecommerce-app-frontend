@@ -1,3 +1,5 @@
+// src/components/layout/checkout/ShippingInformation.tsx
+
 'use client';
 
 import { Input, Button, Typography, Row, Col, Tooltip } from 'antd';
@@ -13,7 +15,8 @@ import { useRouter, usePathname } from 'next/navigation';
 const { Title } = Typography;
 
 interface ShippingInformationProps {
-  onAddressSelected: (addressId: number) => void;
+  // Thay đổi kiểu của onAddressSelected để truyền toàn bộ đối tượng ShippingAddress
+  onAddressSelected: (address: ShippingAddress | null) => void;
 }
 
 const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSelected }) => {
@@ -45,6 +48,9 @@ const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSele
   } = useShippingInfo();
 
   const [localSelectedAddressId, setLocalSelectedAddressId] = useState<number | null>(null);
+  // ⭐ Thêm state để lưu trữ đối tượng địa chỉ đã chọn ⭐
+  const [selectedAddressDetails, setSelectedAddressDetails] = useState<ShippingAddress | null>(null);
+
 
   useEffect(() => {
     if (savedAddresses) {
@@ -53,11 +59,11 @@ const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSele
         if (selected) {
           handleSelectSavedAddressInternal(selected.id, selected);
           setLocalSelectedAddressId(selected.id);
-          onAddressSelected(selected.id);
+          // onAddressSelected(selected.id); // Loại bỏ gọi cũ
         } else {
           resetShippingInfoState();
           setSelectedSavedAddressId(null);
-          onAddressSelected(0);
+          // onAddressSelected(0); // Loại bỏ gọi cũ
         }
       } else if (savedAddresses.length > 0) {
         const defaultAddress = savedAddresses.find((addr) => addr.isDefault);
@@ -65,24 +71,31 @@ const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSele
         handleSelectSavedAddressInternal(addressToSelect.id, addressToSelect);
         setLocalSelectedAddressId(addressToSelect.id);
         setSelectedSavedAddressId(addressToSelect.id);
-        onAddressSelected(addressToSelect.id);
+        // onAddressSelected(addressToSelect.id); // Loại bỏ gọi cũ
       } else {
         resetShippingInfoState();
         setSelectedSavedAddressId(null);
-        onAddressSelected(0);
+        // onAddressSelected(0); // Loại bỏ gọi cũ
         setIsAddingNewAddress(true);
       }
     } else {
       resetShippingInfoState();
       setSelectedSavedAddressId(null);
-      onAddressSelected(0);
+      // onAddressSelected(0); // Loại bỏ gọi cũ
       setIsAddingNewAddress(false);
     }
-  }, [savedAddresses, storedSelectedAddressId, setSelectedSavedAddressId, resetShippingInfo, onAddressSelected, isLoadingUser]);
+  }, [savedAddresses, storedSelectedAddressId, setSelectedSavedAddressId, resetShippingInfo, isLoadingUser]); // Loại bỏ onAddressSelected khỏi dependencies để tránh loop
+
+  // ⭐ Thêm useEffect để gọi onAddressSelected khi selectedAddressDetails thay đổi ⭐
+  useEffect(() => {
+    onAddressSelected(selectedAddressDetails);
+  }, [selectedAddressDetails, onAddressSelected]);
+
 
   const resetShippingInfoState = () => {
     resetShippingInfo();
     setLocalSelectedAddressId(null);
+    setSelectedAddressDetails(null); // Reset cả details
   };
 
   const handleSelectSavedAddressInternal = (addressId: number, addressData: ShippingAddress) => {
@@ -95,7 +108,7 @@ const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSele
     setDistrict(addressData.district || null);
     setProvince(addressData.province || null);
     setSelectedSavedAddressId(addressId);
-    onAddressSelected(addressId);
+    setSelectedAddressDetails(addressData); // ⭐ Cập nhật details ở đây ⭐
   };
 
   const handleSelectSavedAddress = (addressId: number, addressData: ShippingAddress) => {
@@ -103,6 +116,12 @@ const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSele
   };
 
   const handleNewAddress = () => {
+    // Khi thêm địa chỉ mới, reset các state liên quan đến địa chỉ cũ và
+    // thông báo cho component cha rằng hiện tại không có địa chỉ nào được chọn.
+    resetShippingInfoState();
+    setSelectedSavedAddressId(null); // Đảm bảo trạng thái global cũng được reset
+    setIsAddingNewAddress(true);
+    // Điều hướng đến trang quản lý địa chỉ để người dùng thêm mới
     const returnUrl = encodeURIComponent(pathname);
     router.push(`/tai-khoan?p=address&returnUrl=${returnUrl}`);
   };
@@ -143,11 +162,11 @@ const ShippingInformation: React.FC<ShippingInformationProps> = ({ onAddressSele
                   {addr.district && <div>{addr.district}</div>}
                   {addr.province && <div>{addr.province}</div>}
 
-                 {localSelectedAddressId === addr.id && (
-                        <div className="absolute bottom-2 right-2 flex items-center bg-green-500 text-white text-xs rounded-full pr-1 pl-2 py-1">
-                          <span className="mr-1">Đang chọn</span>
-                          <CheckCircleOutlined className="text-white text-base" />
-                        </div>
+                  {localSelectedAddressId === addr.id && (
+                    <div className="absolute bottom-2 right-2 flex items-center bg-green-500 text-white text-xs rounded-full pr-1 pl-2 py-1">
+                      <span className="mr-1">Đang chọn</span>
+                      <CheckCircleOutlined className="text-white text-base" />
+                    </div>
                   )}
                 </div>
               </Col>

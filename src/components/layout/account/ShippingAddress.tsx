@@ -6,30 +6,36 @@ import { useCreateShippingAddress } from '@/hooks/shipping-address/useCreateShip
 import { useUpdateShippingAddress } from '@/hooks/shipping-address/useUpdateShippingAddress';
 import { useDeleteShippingAddress } from '@/hooks/shipping-address/useDeleteShippingAddress';
 import { useSetDefaultShippingAddress } from '@/hooks/shipping-address/useSetDefaultShippingAddress';
-import { List, Button, Tag, Input, Row, Col, message, Modal, Form } from 'antd';
+import { List, Button, Tag, Input, Row, Col, message, Modal, Form, Checkbox } from 'antd'; // Import Checkbox
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { CreateShippingAddressPayload, ShippingAddress as ShippingAddressType } from '@/types/shipping-address.type';
+import { ShippingAddress as ShippingAddressType } from '@/types/shipping-address.type';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// --- NewAddressFormProps Interface ---
+// Đã điều chỉnh để khớp với ShippingAddressType đầy đủ (trừ các trường meta)
 interface NewAddressFormProps {
   onSave: (
-    addressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & {
-      isDefault?: boolean;
-    }
+    addressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   ) => void;
   onCancel: () => void;
-  initialValues?: ShippingAddressType;
+  // initialValues giờ cũng bỏ các trường meta để khớp với type của onSave
+  initialValues?: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 }
 
+// --- NewAddressForm Component ---
 const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initialValues }) => {
   const [form] = Form.useForm();
 
+  // Sử dụng useEffect để setFieldsValue khi initialValues thay đổi (ví dụ: khi chuyển đổi từ thêm mới sang chỉnh sửa)
+  useEffect(() => {
+    form.setFieldsValue(initialValues);
+  }, [initialValues, form]);
+
   const onFinish = (
-    values: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & {
-      isDefault?: boolean;
-    }
+    values: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   ) => {
+    // console.log("Form values submitted:", values); // Dòng này hữu ích để debug payload
     onSave(values);
   };
 
@@ -60,29 +66,60 @@ const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initi
           </Col>
           <Col span={24}>
             <Form.Item
-              label="Địa chỉ"
+              label="Địa chỉ chi tiết (Số nhà, Tên đường)"
               name="address"
-              rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
+              rules={[{ required: true, message: 'Vui lòng nhập địa chỉ chi tiết' }]}
             >
               <Input.TextArea rows={3} />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item label="Phường/Xã" name="ward">
+            <Form.Item
+              label="Phường/Xã"
+              name="ward"
+              rules={[{ required: true, message: 'Vui lòng nhập Phường/Xã' }]} // ⭐ Yêu cầu bắt buộc ⭐
+            >
               <Input />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item label="Quận/Huyện" name="district">
+            <Form.Item
+              label="Quận/Huyện"
+              name="district"
+              rules={[{ required: true, message: 'Vui lòng nhập Quận/Huyện' }]} // ⭐ Yêu cầu bắt buộc ⭐
+            >
               <Input />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item label="Tỉnh/Thành phố" name="province">
+            <Form.Item
+              label="Tỉnh/Thành phố"
+              name="province"
+              rules={[{ required: true, message: 'Vui lòng nhập Tỉnh/Thành phố' }]} // ⭐ Yêu cầu bắt buộc ⭐
+            >
               <Input />
             </Form.Item>
           </Col>
+          {/* Thêm các trường ID cho phường/xã, quận/huyện, tỉnh/thành phố */}
+          {/* <Col xs={24} md={8}>
+            <Form.Item label="Mã Phường/Xã (GHTK)" name="wardId">
+              <Input type="number" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={8}>
+            <Form.Item label="Mã Quận/Huyện (GHTK)" name="districtId">
+              <Input type="number" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={8}>
+            <Form.Item label="Mã Tỉnh/Thành (GHTK)" name="provinceId">
+              <Input type="number" />
+            </Form.Item>
+          </Col> */}
         </Row>
+        <Form.Item name="isDefault" valuePropName="checked">
+          <Checkbox>Đặt làm địa chỉ mặc định</Checkbox>
+        </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" className="mr-2">
             Lưu địa chỉ
@@ -94,6 +131,7 @@ const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initi
   );
 };
 
+// --- ShippingAddress Component (Không thay đổi phần này) ---
 const ShippingAddress: React.FC = () => {
   const { data: currentUser } = useCurrent();
   const router = useRouter();
@@ -107,8 +145,6 @@ const ShippingAddress: React.FC = () => {
   const { mutate: setDefaultAddress } = useSetDefaultShippingAddress();
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ShippingAddressType | null>(null);
-
-  console.log("user", currentUser)
 
   useEffect(() => {
     if (returnUrl && !isAddingNew && !editingAddress) {
@@ -127,9 +163,7 @@ const ShippingAddress: React.FC = () => {
   };
 
   const handleSaveNewAddress = (
-    newAddressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & {
-      isDefault?: boolean;
-    }
+    newAddressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   ) => {
     if (!currentUser?.id) {
       message.error('Bạn cần đăng nhập để thêm địa chỉ.');
@@ -137,7 +171,7 @@ const ShippingAddress: React.FC = () => {
     }
 
     createAddress(
-      { ...newAddressData },
+      { ...newAddressData, userId: currentUser.id },
       {
         onSuccess: () => {
           message.success('Địa chỉ đã được thêm thành công!');
@@ -156,20 +190,14 @@ const ShippingAddress: React.FC = () => {
     );
   };
 
-  // This function now receives *only* the data fields for the address update
   const handleUpdateAddress = (
-    addressId: number, // Explicitly pass the ID here
-    updatedAddressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & {
-      isDefault?: boolean;
-    }
+    addressId: number,
+    updatedAddressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   ) => {
-    // The previous check for editingAddress?.id is now redundant here since addressId is directly passed
-    // if (!editingAddress?.id) return; 
-
     updateAddress(
       {
-        id: addressId, // Use the directly passed addressId
-        data: updatedAddressData, // Pass the clean data object
+        id: addressId,
+        data: updatedAddressData,
       },
       {
         onSuccess: () => {
@@ -189,7 +217,6 @@ const ShippingAddress: React.FC = () => {
       }
     );
   };
-
 
   const handleDelete = (id: number) => {
     Modal.confirm({
@@ -227,12 +254,9 @@ const ShippingAddress: React.FC = () => {
   };
 
   const handleSaveForm = (
-    formData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & {
-      isDefault?: boolean;
-    }
+    formData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   ) => {
     if (editingAddress) {
-      // Call handleUpdateAddress with the ID and the formData
       handleUpdateAddress(editingAddress.id, formData);
     } else {
       handleSaveNewAddress(formData);
@@ -304,7 +328,12 @@ const ShippingAddress: React.FC = () => {
             >
               <List.Item.Meta
                 title={`${item.fullName} - ${item.phone}`}
-                description={`${item.address}${item.ward ? `, ${item.ward}` : ''}${item.district ? `, ${item.district}` : ''}${item.province ? `, ${item.province}` : ''}`}
+                description={
+                  `${item.address}` +
+                  `${item.ward ? `, ${item.ward}` : ''}` +
+                  `${item.district ? `, ${item.district}` : ''}` +
+                  `${item.province ? `, ${item.province}` : ''}`
+                }
               />
             </List.Item>
           )}
@@ -317,7 +346,22 @@ const ShippingAddress: React.FC = () => {
         <NewAddressForm
           onSave={handleSaveForm}
           onCancel={handleCancelNewAddress}
-          initialValues={editingAddress ?? undefined}
+          initialValues={
+            editingAddress
+              ? {
+                  fullName: editingAddress.fullName,
+                  phone: editingAddress.phone,
+                  address: editingAddress.address,
+                  ward: editingAddress.ward,
+                  district: editingAddress.district,
+                  province: editingAddress.province,
+                  wardId: editingAddress.wardId,
+                  districtId: editingAddress.districtId,
+                  provinceId: editingAddress.provinceId,
+                  isDefault: editingAddress.isDefault,
+                }
+              : undefined
+          }
         />
       )}
     </div>

@@ -9,7 +9,14 @@ const CART_COOKIE_KEY = 'shoppingCart';
 const loadCartFromCookie = (): CartItem[] => {
   try {
     const cartData = Cookies.get(CART_COOKIE_KEY);
-    return cartData ? JSON.parse(cartData) : [];
+    const parsedData = cartData ? JSON.parse(cartData) : [];
+    // Đảm bảo các trường weight và weightUnit tồn tại khi đọc từ cookie
+    return parsedData.map((item: CartItem) => ({
+      ...item,
+      // Cung cấp giá trị mặc định nếu item.weight hoặc item.weightUnit không tồn tại trong cookie cũ
+      weight: item.weight || 0,
+      weightUnit: item.weightUnit || 'gram', // Hoặc đơn vị mặc định của bạn
+    }));
   } catch (error) {
     console.error("Lỗi khi đọc cookie giỏ hàng:", error);
     return [];
@@ -45,10 +52,14 @@ const useCartStore = create<CartState>((set, get) => ({
         color,
         size,
         quantity = 1,
+        // ⭐ THÊM weight và weightUnit vào đây ⭐
+        weight,
+        weightUnit,
       } = itemData;
 
       const discountedPrice = discount && discount > 0 ? price - discount : undefined;
 
+      // Chuyển đổi ID màu và kích thước thành số nếu chúng được lưu trữ dưới dạng số
       const numericalColorId = color?.id ? Number(color.id) : undefined;
       const numericalSizeId = size?.id ? Number(size.id) : undefined;
 
@@ -66,9 +77,12 @@ const useCartStore = create<CartState>((set, get) => ({
         price: price,
         discountedPrice: discountedPrice,
         selectedColor: color,
-        selectedSizeId: size?.id,
+        selectedSizeId: size?.id, // Lưu ý: selectedSizeId vẫn là string nếu size.id là string
         selectedSizeTitle: size?.title,
         quantity: quantity,
+        // ⭐ GÁN weight và weightUnit vào newItem ⭐
+        weight: weight,
+        weightUnit: weightUnit,
       };
 
       // Tìm kiếm mục hiện có dựa trên productId, colorId, sizeId, variantId
@@ -87,7 +101,16 @@ const useCartStore = create<CartState>((set, get) => ({
             i.colorId === newItem.colorId &&
             i.sizeId === newItem.sizeId &&
             i.variantId === newItem.variantId)
-            ? { ...i, quantity: i.quantity + newItem.quantity }
+            ? {
+                ...i,
+                quantity: i.quantity + newItem.quantity,
+                // Khi cập nhật số lượng, bạn có thể cũng muốn cập nhật weight/weightUnit
+                // đề phòng trường hợp product data thay đổi, nhưng thường thì không cần
+                // nếu weight/weightUnit là cố định cho một sản phẩm.
+                // Nếu muốn giữ nguyên weight/weightUnit của existingItem, bỏ 2 dòng dưới.
+                // weight: newItem.weight,
+                // weightUnit: newItem.weightUnit,
+              }
             : i
         );
       } else {
@@ -142,12 +165,25 @@ const useCartStore = create<CartState>((set, get) => ({
       return total + priceToUse * item.quantity;
     }, 0);
   },
+
+  // ⭐ THÊM HÀM MỚI ĐỂ TÍNH TỔNG CÂN NẶNG ⭐
+  getTotalWeight: () => {
+    return get().items.reduce((totalWeight, item) => {
+      let itemWeightInGrams = item.weight || 0;
+      if (item.weightUnit && item.weightUnit.toLowerCase() === 'kg') {
+        itemWeightInGrams = item.weight * 1000;
+      }
+      return totalWeight + itemWeightInGrams * item.quantity;
+    }, 0);
+  },
 }));
 
 export const useCart = () => {
   const store = useCartStore();
   useEffect(() => {
-    store.hydrate();
+    if (typeof window !== 'undefined') {
+      store.hydrate();
+    }
   }, [store.hydrate]);
 
   return store;

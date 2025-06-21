@@ -11,13 +11,13 @@ const { Title, Text } = Typography;
 
 interface OrderSummaryProps {
   onCouponApplied: (couponId: number | null, discountAmount: number | null) => void;
+  shippingFee: number | null;
 }
 
-const OrderSummary: React.FC<OrderSummaryProps> = ({ onCouponApplied }) => {
+const OrderSummary: React.FC<OrderSummaryProps> = ({ onCouponApplied, shippingFee }) => {
   const { items: cartItems, getTotalPrice } = useCart();
   const totalPrice = getTotalPrice();
 
-  const { shippingFee } = useShippingMethod();
 
   const [couponCode, setCouponCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number | null>(null);

@@ -10,8 +10,7 @@ import {
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { useUpdateConfig } from '@/hooks/config/useUpdateConfig';
-import { Config } from '@/types/config.type'; // Đảm bảo type Config đã có 4 trường mới
+import { Config } from '@/types/config.type'; // Đảm bảo type Config đã có các trường mới
 
 interface ConfigUpdateModalProps {
   open: boolean;
@@ -29,9 +28,10 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
     if (!value) {
       return Promise.resolve();
     }
-    const phoneRegex = /^(0[2-9]\d{8,9}|[+]84[2-9]\d{8,9})$/;
+    // Regex cho số điện thoại Việt Nam, bao gồm cả dạng 0xxxxxxxxx và +84xxxxxxxxx
+    const phoneRegex = /^(0[2-9]\d{8}|[+]84[2-9]\d{8})$/; // Đã điều chỉnh regex cho 10 số sau 0 hoặc +84
     if (!phoneRegex.test(value)) {
-      return Promise.reject('Số điện thoại không hợp lệ');
+      return Promise.reject('Số điện thoại không hợp lệ (ví dụ: 0912345678 hoặc +84912345678)');
     }
     return Promise.resolve();
   };
@@ -43,11 +43,13 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
         email: config.email,
         mobile: config.mobile,
         address: config.address,
-        // CẬP NHẬT useEffect ĐỂ SET GIÁ TRỊ CHO 4 TRƯỜNG MỚI
+        // CẬP NHẬT useEffect ĐỂ SET GIÁ TRỊ CHO CÁC TRƯỜNG MỚI
         pick_province: config.pick_province,
         pick_district: config.pick_district,
         pick_ward: config.pick_ward,
         pick_address: config.pick_address,
+        pick_tel: config.pick_tel,     // Đã thêm
+        pick_name: config.pick_name,   // Đã thêm
         // KẾT THÚC CẬP NHẬT
         googlemap: config.googlemap,
         facebook: config.facebook,
@@ -98,8 +100,18 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
           <Input />
         </Form.Item>
 
-        {/* THÊM CÁC FORM.ITEM CHO 4 TRƯỜNG ĐỊA CHỈ LẤY HÀNG MỚI */}
+        {/* THÊM CÁC FORM.ITEM CHO CÁC TRƯỜNG ĐỊA CHỈ LẤY HÀNG MỚI */}
         <h3>Thông tin địa chỉ lấy hàng mặc định</h3>
+       <Form.Item label="Địa chỉ" name="pick_name">
+          <Input />
+        </Form.Item>
+        <Form.Item
+          label="SĐT lấy hàng"
+          name="pick_tel" // Đã thêm
+          rules={[{ validator: validateMobile }]} // Áp dụng validation số điện thoại
+        >
+          <Input />
+        </Form.Item>
         <Form.Item label="Tỉnh/Thành phố lấy hàng" name="pick_province">
           <Input />
         </Form.Item>
@@ -144,7 +156,7 @@ const ConfigUpdateModal = ({ open, onClose, config, onUpdate, isUpdating }: Conf
             listType="picture"
             fileList={logoFileList}
             onChange={({ fileList }) => setLogoFileList(fileList)}
-            beforeUpload={() => false}
+            beforeUpload={() => false} // Ngăn Ant Design Upload tự động upload file
             maxCount={1}
             accept="image/*"
           >

@@ -15,8 +15,10 @@ export interface Config {
   logo?: string | null;
   createdAt: Date;
   updatedAt: Date;
-  pick_province?: string;
-  pick_district?: string;
-  pick_ward?: string;
-  pick_address?: string;
+  pick_province?: string | null; // Có thể null
+  pick_district?: string | null; // Có thể null
+  pick_ward?: string | null;     // Có thể null
+  pick_address?: string | null;  // Có thể null
+  pick_tel?: string | null;      // Đã thêm, có thể null
+  pick_name?: string | null;     // Đã thêm, có thể null
 }

@@ -19,6 +19,10 @@ export interface CartItem {
   selectedSizeId?: string;
   selectedSizeTitle?: string;
   quantity: number;
+
+   // ⭐ BỔ SUNG CÁC TRƯỜNG CÂN NẶNG ⭐
+  weight: number; // Cân nặng của một đơn vị sản phẩm
+  weightUnit: string; // Đơn vị cân nặng (e.g., "gram", "kg")
 }
 
 export interface CartState {
@@ -36,6 +40,8 @@ export interface CartState {
       quantity?: number;
       color?: { id: string; title: string; code: string };
       size?: { id: string; title: string };
+      weight: number; // Cần truyền weight khi thêm item
+      weightUnit: string; // Cần truyền weightUnit khi thêm item
     }
   ) => void;
   // Các hàm removeItem, increaseItemQuantity, decreaseItemQuantity đã được thay đổi để dùng `id: string`
@@ -45,4 +51,5 @@ export interface CartState {
   decreaseItemQuantity: (cartItemId: string) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
+  getTotalWeight: () => number;
 }

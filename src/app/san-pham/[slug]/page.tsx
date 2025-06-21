@@ -20,73 +20,92 @@ export default function ProductDetailPage() {
   const { slug } = useParams();
   const router = useRouter();
   const { data: productData, isLoading: isProductLoading, isError: isProductError } = useProductBySlug({ slug: slug as string });
-  const product = productData;
-  const productId = product?.id;
+  const productId = productData?.id;
 
+  // Lấy variants và xử lý để nhúng weight/weightUnit từ productData
   const { data: variantsResponse, isLoading: isVariantsLoading, isError: isVariantsError } = useVariants({ productId: productId });
-  const variants = variantsResponse?.data;
+
+  // ⭐ Bắt đầu phần chỉnh sửa để nhúng weight/weightUnit ⭐
+  const product = productData ? {
+    ...productData,
+    // Đảm bảo sản phẩm gốc có weight/weightUnit. Nếu API trả về rồi thì đây là cách "khẳng định" lại
+    weight: productData.weight,
+    weightUnit: productData.weightUnit,
+  } : undefined;
+
+  const variants = variantsResponse?.data?.map((variant: any) => ({
+    ...variant,
+    // Nhúng weight/weightUnit từ productData nếu variant không có thuộc tính này
+    weight: variant.weight !== undefined ? variant.weight : productData?.weight,
+    weightUnit: variant.weightUnit !== undefined ? variant.weightUnit : productData?.weightUnit,
+  })) || [];
+  // ⭐ Kết thúc phần chỉnh sửa ⭐
+
 
   const [currentData, setCurrentData] = useState<any>(null);
   const [isViewingProduct, setIsViewingProduct] = useState(true);
-  const [selectedSizeId, setSelectedSizeId] = useState<number  | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [sizeMessage, setSizeMessage] = useState('');
   const [mainImage, setMainImage] = useState<string | null>(null);
 
 
   const { addItem: addItemToCart } = useCart();
 
+  // useEffect để khởi tạo currentData khi product (đã được xử lý weight/weightUnit) có sẵn
   useEffect(() => {
-    if (productData && !currentData) {
+    if (product && !currentData) {
       setCurrentData({
-        ...productData,
-        productId: productData.id,
+        ...product, // 'product' ở đây đã có weight và weightUnit
+        productId: product.id,
       });
       setIsViewingProduct(true);
     }
-  }, [productData, currentData]);
+  }, [product, currentData]);
 
   useEffect(() => {
     if (currentData) {
       if (currentData.sizes && currentData.sizes.length > 0) {
         const defaultSize = currentData.sizes[0];
-         setSelectedSizeId(defaultSize?.id || null);
-        // Set initial message for the default selected size if applicable
+        setSelectedSizeId(defaultSize?.id || null);
         if (defaultSize?.quantity !== undefined) {
           setSizeMessage(`Size ${defaultSize.title} còn ${defaultSize.quantity} sản phẩm.`);
         } else {
-          setSizeMessage(''); // Clear message if quantity is not available
+          setSizeMessage('');
         }
       } else {
         setSelectedSizeId(null);
-         setSizeMessage('');
+        setSizeMessage('');
       }
       setMainImage(currentData.thumb);
     }
   }, [currentData]);
 
   const handleViewVariantByColor = (variant: any) => {
+    // 'variant' ở đây đã là đối tượng đã được xử lý từ mảng 'variants' phía trên,
+    // nên nó đã có sẵn weight và weightUnit chính xác.
     setCurrentData({
       ...variant,
       productId: variant.productId,
       variantId: variant.id,
     });
     setIsViewingProduct(false);
-     setSelectedSizeId(null);
+    setSelectedSizeId(null);
     setSizeMessage('');
   };
 
   const resetToProduct = () => {
+    // 'product' ở đây cũng là đối tượng đã được xử lý ở trên
     setCurrentData({
       ...product,
       productId: product?.id,
       variantId: undefined,
     });
     setIsViewingProduct(true);
-     setSelectedSizeId(null);
+    setSelectedSizeId(null);
     setSizeMessage('');
   };
 
-  const handleSelectSize = (sizeId: number, quantity: number, sizeTitle: string) => { // Tham số sizeId là number
+  const handleSelectSize = (sizeId: number, quantity: number, sizeTitle: string) => {
     setSelectedSizeId(sizeId);
     setSizeMessage(`Size ${sizeTitle} còn ${quantity} sản phẩm.`);
   };
@@ -128,6 +147,8 @@ export default function ProductDetailPage() {
       colorId: numericalColorId,
       sizeId: numericalSizeId,
       size: selectedSize ? { id: selectedSize.id, title: selectedSize.title } : undefined,
+      weight: currentData.weight,       // ⭐ Giờ đây weight luôn chính xác vì đã được nhúng ⭐
+      weightUnit: currentData.weightUnit, // ⭐ và weightUnit cũng vậy ⭐
     };
   };
 
@@ -256,7 +277,7 @@ export default function ProductDetailPage() {
                 </Card>
               )}
 
-              {variants && variants
+              {variants
                 .filter(variant => variant.thumb && variant.color)
                 .map(variant => (
                   <Card
@@ -292,12 +313,12 @@ export default function ProductDetailPage() {
               {(currentData?.sizes || []).map((item: any) => {
                 const sizeId = item.id;
                 const sizeTitle = item.title;
-                const quantity = item.quantity; // Lấy quantity từ item
+                const quantity = item.quantity;
 
                 return (
                   <div
                     key={sizeId}
-                    onClick={() => handleSelectSize(sizeId, quantity, sizeTitle)} // Truyền quantity vào handleSelectSize
+                    onClick={() => handleSelectSize(sizeId, quantity, sizeTitle)}
                     className={`cursor-pointer px-3 py-1 text-sm rounded-md border ${
                       selectedSizeId === sizeId
                         ? 'bg-blue-500 text-white border-blue-500'
