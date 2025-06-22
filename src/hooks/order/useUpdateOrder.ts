@@ -2,11 +2,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/axios';
 import { Order, UpdateOrderDto } from '@/types/order/order.type'; // Đảm bảo đường dẫn đúng
+import { OrderStatus } from '@/enums/order.enums';
 
 // Định nghĩa một interface cho payload của mutation
 interface UpdateOrderMutationPayload {
   id: number;
-  status: Order['status']; // Hoặc UpdateOrderDto nếu bạn muốn cho phép cập nhật nhiều trường
+  status: OrderStatus; // Hoặc UpdateOrderDto nếu bạn muốn cho phép cập nhật nhiều trường
 }
 
 export const useUpdateOrder = () => { // KHÔNG NHẬN orderId ở đây

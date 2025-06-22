@@ -71,9 +71,9 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ onCouponApplied, shippingFe
             {item.selectedSizeTitle && <Text className="ml-1"> - {item.selectedSizeTitle}</Text>}
             <div className="flex items-center">
               <Text>{formatVND(item.discountedPrice !== undefined ? item.discountedPrice : item.price)}</Text>
-              {item.discountedPrice !== undefined && (
+              {/* {item.discountedPrice !== undefined && (
                 <Text delete className="ml-1 text-gray-500">{formatVND(item.price)}</Text>
-              )}
+              )} */}
               <Text className="ml-2">x {item.quantity}</Text>
             </div>
           </div>

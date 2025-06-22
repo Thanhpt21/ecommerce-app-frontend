@@ -9,17 +9,16 @@ export interface Order {
   userId: number;
   shippingAddressId: number;
   couponId?: number | null;
-  shippingId?: number | null;
   shippingFee?: number | null;
+  orderCode: string; 
 
   user: User;
   shippingAddress: ShippingAddress;
   coupon?: Coupon | null;
-  shipping?: Shipping | null;
   items: OrderItem[];
 
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "returned"; // Added "confirmed"
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   note?: string | null;
 
   totalAmount: number;

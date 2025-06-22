@@ -346,7 +346,7 @@ export default function ProductDetailPage() {
           </Button>
         </div>
       </div>
-      <div className="mt-10">
+      <div className="mt-30">
         {productId && (
           <Tabs defaultActiveKey="description" size="large">
             <Tabs.TabPane tab="Mô tả" key="description">

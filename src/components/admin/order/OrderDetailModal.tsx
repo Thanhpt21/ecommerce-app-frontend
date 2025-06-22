@@ -5,6 +5,7 @@ import { Modal, Typography, Descriptions, Table, Image } from 'antd';
 import { Order } from '@/types/order/order.type';
 import { useOrderOne } from '@/hooks/order/useOrderOne';
 import { formatDate } from '@/utils/helpers';
+import { getPaymentMethodVietnamese } from '@/utils/translation';
 
 
 interface OrderDetailModalProps {
@@ -45,18 +46,13 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ open, onClose, orde
       width={1200} // Tăng chiều rộng modal
     >
       <Descriptions bordered>
-        <Descriptions.Item label="Mã đơn hàng">{order.id}</Descriptions.Item>
+        <Descriptions.Item label="Mã đơn hàng">{order.orderCode}</Descriptions.Item>
         <Descriptions.Item label="Khách hàng (Email)">{order.user.email}</Descriptions.Item>
     
-        <Descriptions.Item label="Phương thức thanh toán">{order.paymentMethod}</Descriptions.Item>
+        <Descriptions.Item label="Phương thức thanh toán">  {getPaymentMethodVietnamese(order.paymentMethod)}</Descriptions.Item>
         <Descriptions.Item label="Ngày tạo">
           {formatDate((order.createdAt))}
         </Descriptions.Item>
-         {order.shipping && (
-          <Descriptions.Item label="Phí vận chuyển">
-            {order.shipping.fee?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
-          </Descriptions.Item>
-        )}
           {order.shippingFee !== undefined && order.shippingFee !== null && (
           <Descriptions.Item label="Phí vận chuyển">
             {order.shippingFee?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
@@ -131,17 +127,27 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ open, onClose, orde
             dataIndex: 'quantity',
             key: 'quantity',
           },
-          {
-            title: 'Giá',
-            dataIndex: 'price',
-            key: 'price',
-            render: (price) => price?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
-          },
-          {
-            title: 'Giảm giá',
-            dataIndex: 'discount',
-            key: 'discount',
-            render: (discount) => discount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
+            {
+            title: 'Giá', // Tên cột vẫn là 'Giá'
+            key: 'price_after_discount', // Đổi key để tránh trùng lặp nếu có
+            render: (text, item) => {
+              // Tính giá sau giảm giá
+              const price = item.price ?? 0; // Đảm bảo có giá trị số
+              const discount = item.discount ?? 0; // Đảm bảo có giá trị số
+              const finalItemPrice = price - discount;
+
+              return (
+                <span>
+                  {finalItemPrice.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                  {/* Tùy chọn: Hiển thị giá gốc gạch ngang nếu có giảm giá */}
+                  {/* {discount > 0 && (
+                    <span className="ml-2 text-gray-500 line-through text-sm">
+                      {price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                    </span>
+                  )} */}
+                </span>
+              );
+            },
           },
         ]}
       />

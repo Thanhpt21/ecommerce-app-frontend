@@ -110,7 +110,8 @@ export const CouponCreateModal = ({ open, onClose, refetch }: CouponCreateModalP
         </Form.Item>
 
        <Form.Item label="Giá trị đơn hàng tối thiểu" name="minOrderValue" rules={[{ required: true, message: 'Vui lòng nhập giá trị đơn hàng tối thiểu' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any} min={0} style={{ width: '100%' }} />
         </Form.Item>
 
         <Form.Item>

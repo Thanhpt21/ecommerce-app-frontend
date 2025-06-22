@@ -2,10 +2,13 @@
 
 export enum OrderStatus {
   Pending = 'pending',
-  Paid = 'paid',
-  Shipping = 'shipping',
+  Confirmed = 'confirmed',
+  Preparing = 'preparing',
+  Shipped = 'shipped',
+  Delivered = 'delivered',
   Completed = 'completed',
   Cancelled = 'cancelled',
+  Returned = 'returned',
 }
 
 export enum PaymentMethod {

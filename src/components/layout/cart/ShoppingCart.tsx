@@ -114,9 +114,9 @@ const ShoppingCart = () => {
         const originalTotalPriceForItem = record.price * record.quantity;
         return (
           <span>
-            {record.discountedPrice !== undefined && (
+            {/* {record.discountedPrice !== undefined && (
               <span className="line-through text-gray-500 mr-2">{formatVND(originalTotalPriceForItem)}</span>
-            )}
+            )} */}
             {formatVND(totalPriceForItem)}
           </span>
         );

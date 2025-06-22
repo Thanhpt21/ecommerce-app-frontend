@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { formatDate } from '@/utils/helpers';
 import { useCurrent } from '@/hooks/auth/useCurrent';
 import { useOrdersByUser } from '@/hooks/order/useOrdersByUser';
+import { getPaymentMethodVietnamese } from '@/utils/translation';
 
 interface OrderDetailViewProps {
   order: Order;
@@ -18,17 +19,20 @@ const OrderDetailView: React.FC<OrderDetailViewProps> = ({ order }) => {
 
   return (
     <div className="border rounded-md p-4 mt-4">
-      <Title level={5} className="mb-2">ID Đơn hàng: #{order.id}</Title>
+      <Title level={5} className="mb-2">Mã Đơn hàng: {order.orderCode}</Title>
       <Descriptions bordered size="small">
         <Descriptions.Item label="Trạng thái">
           {order.status === 'pending' && 'Đang chờ xử lý'}
           {order.status === 'confirmed' && 'Đã xác nhận'}
+          {order.status === 'preparing' && 'Người bán đang chuẩn bị hàng'} {/* ⭐ Added this line ⭐ */}
           {order.status === 'shipped' && 'Đang giao hàng'}
           {order.status === 'delivered' && 'Đã giao hàng'}
           {order.status === 'cancelled' && 'Đã hủy'}
           {order.status === 'returned' && 'Đã trả hàng'}
+          {/* Fallback for any unhandled status, though ideally all should be covered */}
+          {!['pending', 'confirmed', 'preparing', 'shipped', 'delivered', 'cancelled', 'returned'].includes(order.status) && order.status}
         </Descriptions.Item>
-        <Descriptions.Item label="Phương thức thanh toán">{order.paymentMethod}</Descriptions.Item>
+          <Descriptions.Item label="Phương thức thanh toán"> {getPaymentMethodVietnamese(order.paymentMethod)}</Descriptions.Item>
         <Descriptions.Item label="Ngày đặt hàng">{formatDate(order.createdAt)}</Descriptions.Item>
       
         {order.shippingAddress && (
@@ -45,11 +49,6 @@ const OrderDetailView: React.FC<OrderDetailViewProps> = ({ order }) => {
               {order.coupon.discount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
             </Descriptions.Item>
           </>
-        )}
-        {order.shipping && (
-          <Descriptions.Item label="Phí vận chuyển">
-            {order.shipping.fee?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
-          </Descriptions.Item>
         )}
         {order.shippingFee !== undefined && order.shippingFee !== null && (
           <Descriptions.Item label="Phí vận chuyển">
@@ -100,15 +99,18 @@ const OrderDetailView: React.FC<OrderDetailViewProps> = ({ order }) => {
           },
           {
             title: 'Giá',
-            dataIndex: 'price',
-            key: 'price',
-            render: (price) => price?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
-          },
-          {
-            title: 'Chiết khấu',
-            dataIndex: 'discount',
-            key: 'discount',
-            render: (discount) => discount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
+            key: 'price_after_discount',
+            render: (text, item) => {
+              const price = item.price ?? 0;
+              const discount = item.discount ?? 0;
+              const finalItemPrice = price - discount;
+
+              return (
+                <span>
+                  {finalItemPrice.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                </span>
+              );
+            },
           },
         ]}
       />
@@ -164,15 +166,19 @@ const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
               ]}
             >
               <List.Item.Meta
-                title={<div className="font-semibold">ID Đơn hàng: {order.id}</div>}
-                description={`Ngày đặt hàng ${formatDate(order.createdAt)} - ${
-                  order.status === 'pending' ? 'Đang chờ xử lý' :
-                  order.status === 'confirmed' ? 'Đã xác nhận' :
-                  order.status === 'shipped' ? 'Đang giao hàng' :
-                  order.status === 'delivered' ? 'Đã giao hàng' :
-                  order.status === 'cancelled' ? 'Đã hủy' :
-                  order.status === 'returned' ? 'Đã trả hàng' : ''
-                } - ${order.finalAmount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}`}
+                title={<div className="font-semibold">Mã Đơn hàng: {order.orderCode}</div>}
+                description={
+                  `Ngày đặt hàng ${formatDate(order.createdAt)} - ${
+                    order.status === 'pending' ? 'Đang chờ xử lý' :
+                    order.status === 'confirmed' ? 'Đã xác nhận' :
+                    order.status === 'preparing' ? 'Người bán đang chuẩn bị hàng' : // ⭐ Added this line ⭐
+                    order.status === 'shipped' ? 'Đang giao hàng' :
+                    order.status === 'delivered' ? 'Đã giao hàng' :
+                    order.status === 'cancelled' ? 'Đã hủy' :
+                    order.status === 'returned' ? 'Đã trả hàng' :
+                    order.status // Fallback if status is not covered
+                  } - ${order.finalAmount?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}`
+                }
               />
               {order.items.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center mt-2">
@@ -197,7 +203,7 @@ const PurchaseHistory: React.FC<PurchaseHistoryProps> = () => {
 
       {selectedOrder && (
         <Modal
-          visible={isModalOpen}
+          visible={isModalOpen} // Use 'open' instead of 'visible' for Ant Design v5+
           title="Chi tiết đơn hàng"
           onCancel={handleCloseModal}
           footer={[
