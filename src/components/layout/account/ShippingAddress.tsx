@@ -1,3 +1,4 @@
+// src/components/ShippingAddressList.tsx
 'use client';
 
 import { useCurrent } from '@/hooks/auth/useCurrent';
@@ -6,133 +7,15 @@ import { useCreateShippingAddress } from '@/hooks/shipping-address/useCreateShip
 import { useUpdateShippingAddress } from '@/hooks/shipping-address/useUpdateShippingAddress';
 import { useDeleteShippingAddress } from '@/hooks/shipping-address/useDeleteShippingAddress';
 import { useSetDefaultShippingAddress } from '@/hooks/shipping-address/useSetDefaultShippingAddress';
-import { List, Button, Tag, Input, Row, Col, message, Modal, Form, Checkbox } from 'antd'; // Import Checkbox
+import { List, Button, Tag, message, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { ShippingAddress as ShippingAddressType } from '@/types/shipping-address.type';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-// --- NewAddressFormProps Interface ---
-// Đã điều chỉnh để khớp với ShippingAddressType đầy đủ (trừ các trường meta)
-interface NewAddressFormProps {
-  onSave: (
-    addressData: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
-  ) => void;
-  onCancel: () => void;
-  // initialValues giờ cũng bỏ các trường meta để khớp với type của onSave
-  initialValues?: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
-}
+import NewAddressForm from './NewAddressForm'; // Import component form mới
 
-// --- NewAddressForm Component ---
-const NewAddressForm: React.FC<NewAddressFormProps> = ({ onSave, onCancel, initialValues }) => {
-  const [form] = Form.useForm();
-
-  // Sử dụng useEffect để setFieldsValue khi initialValues thay đổi (ví dụ: khi chuyển đổi từ thêm mới sang chỉnh sửa)
-  useEffect(() => {
-    form.setFieldsValue(initialValues);
-  }, [initialValues, form]);
-
-  const onFinish = (
-    values: Omit<ShippingAddressType, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
-  ) => {
-    // console.log("Form values submitted:", values); // Dòng này hữu ích để debug payload
-    onSave(values);
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-md shadow-md mt-4">
-      <h3 className="text-lg font-semibold mb-4">
-        {initialValues ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}
-      </h3>
-      <Form form={form} layout="vertical" onFinish={onFinish} initialValues={initialValues}>
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="Họ và tên"
-              name="fullName"
-              rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="Số điện thoại"
-              name="phone"
-              rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
-            >
-              <Input type="tel" />
-            </Form.Item>
-          </Col>
-          <Col span={24}>
-            <Form.Item
-              label="Địa chỉ chi tiết (Số nhà, Tên đường)"
-              name="address"
-              rules={[{ required: true, message: 'Vui lòng nhập địa chỉ chi tiết' }]}
-            >
-              <Input.TextArea rows={3} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item
-              label="Phường/Xã"
-              name="ward"
-              rules={[{ required: true, message: 'Vui lòng nhập Phường/Xã' }]} // ⭐ Yêu cầu bắt buộc ⭐
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item
-              label="Quận/Huyện"
-              name="district"
-              rules={[{ required: true, message: 'Vui lòng nhập Quận/Huyện' }]} // ⭐ Yêu cầu bắt buộc ⭐
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item
-              label="Tỉnh/Thành phố"
-              name="province"
-              rules={[{ required: true, message: 'Vui lòng nhập Tỉnh/Thành phố' }]} // ⭐ Yêu cầu bắt buộc ⭐
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          {/* Thêm các trường ID cho phường/xã, quận/huyện, tỉnh/thành phố */}
-          {/* <Col xs={24} md={8}>
-            <Form.Item label="Mã Phường/Xã (GHTK)" name="wardId">
-              <Input type="number" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item label="Mã Quận/Huyện (GHTK)" name="districtId">
-              <Input type="number" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item label="Mã Tỉnh/Thành (GHTK)" name="provinceId">
-              <Input type="number" />
-            </Form.Item>
-          </Col> */}
-        </Row>
-        <Form.Item name="isDefault" valuePropName="checked">
-          <Checkbox>Đặt làm địa chỉ mặc định</Checkbox>
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" className="mr-2">
-            Lưu địa chỉ
-          </Button>
-          <Button onClick={onCancel}>Hủy</Button>
-        </Form.Item>
-      </Form>
-    </div>
-  );
-};
-
-// --- ShippingAddress Component (Không thay đổi phần này) ---
-const ShippingAddress: React.FC = () => {
+const ShippingAddressList: React.FC = () => {
   const { data: currentUser } = useCurrent();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,10 +26,12 @@ const ShippingAddress: React.FC = () => {
   const { mutate: updateAddress } = useUpdateShippingAddress();
   const { mutate: deleteAddress } = useDeleteShippingAddress();
   const { mutate: setDefaultAddress } = useSetDefaultShippingAddress();
+
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ShippingAddressType | null>(null);
 
   useEffect(() => {
+    // Nếu có returnUrl và không trong chế độ thêm/sửa, tự động mở form thêm mới
     if (returnUrl && !isAddingNew && !editingAddress) {
       handleAddNew();
     }
@@ -154,12 +39,12 @@ const ShippingAddress: React.FC = () => {
 
   const handleAddNew = () => {
     setIsAddingNew(true);
-    setEditingAddress(null);
+    setEditingAddress(null); // Đảm bảo không ở chế độ chỉnh sửa
   };
 
   const handleEdit = (address: ShippingAddressType) => {
     setEditingAddress(address);
-    setIsAddingNew(true);
+    setIsAddingNew(true); // Mở form trong chế độ chỉnh sửa
   };
 
   const handleSaveNewAddress = (
@@ -355,9 +240,6 @@ const ShippingAddress: React.FC = () => {
                   ward: editingAddress.ward,
                   district: editingAddress.district,
                   province: editingAddress.province,
-                  wardId: editingAddress.wardId,
-                  districtId: editingAddress.districtId,
-                  provinceId: editingAddress.provinceId,
                   isDefault: editingAddress.isDefault,
                 }
               : undefined
@@ -368,4 +250,4 @@ const ShippingAddress: React.FC = () => {
   );
 };
 
-export default ShippingAddress;
+export default ShippingAddressList;

@@ -1,7 +1,7 @@
 'use client';
 
 
-import ConfigTable from '@/components/config/ConfigTable';
+import ConfigTable from '@/components/admin/config/ConfigTable';
 import { Typography } from 'antd';
 
 const { Title } = Typography;

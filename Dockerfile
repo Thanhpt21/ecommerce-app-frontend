@@ -1,53 +1,52 @@
-# -----------------------------------------------------------
-# Build Stage - Creates the Next.js product build
-# -----------------------------------------------------------
-FROM node:22-alpine AS builder
+# frontend/Dockerfile
 
-# Set the working directory inside the container
+# -----------------------------------------------------------
+# Giai đoạn Build (builder stage) - Tạo bản build sản phẩm Next.js
+# -----------------------------------------------------------
+FROM node:22 AS builder
+
 WORKDIR /app
 
-# Copy dependency configuration files (package.json and lock file)
+# Copy các file cấu hình dependency
 COPY package.json package-lock.json ./
 
-# Install all dependencies (including dev dependencies)
+# Cài đặt tất cả các dependencies (bao gồm dev dependencies)
 RUN npm install
 
-# Copy all Next.js project source code
+# Copy toàn bộ mã nguồn của dự án Next.js
 COPY . .
 
-# Compile the Next.js application
-# This command will create the .next/ directory and static files, as well as server-side code.
-# The 'build' script in your package.json runs 'next build'.
+# Chạy lệnh build của Next.js
+# Lệnh này sẽ tạo ra thư mục .next/ chứa bản build optimized
 RUN npm run build
 
 # -----------------------------------------------------------
-# Production Stage - Creates a lightweight image to run the Next.js application
+# Giai đoạn Production (runner stage) - Tạo image nhẹ để chạy ứng dụng Next.js
 # -----------------------------------------------------------
-FROM node:22-alpine AS runner
+FROM node:22 AS runner
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Next.js requires these directories to run in production.
-# Copy only the package.json and lock file needed for runtime (only production deps).
-COPY package.json package-lock.json ./
+# Copy chỉ các file package.json và package-lock.json cần thiết cho runtime
+COPY --from=builder /app/package.json /app/package-lock.json ./
 
-# Install only production dependencies (do not install dev dependencies)
+# Cài đặt chỉ các production dependencies
 RUN npm install --omit=dev
 
-# Copy the .next/ directory from the 'builder' stage.
-# This is where the optimized Next.js code is located.
+# Copy thư mục .next/ (chứa bản build) từ giai đoạn 'builder'
 COPY --from=builder /app/.next ./.next
 
-# Copy the public/ directory containing static assets (e.g., images, favicon).
+# Nếu bạn có thư mục public (ví dụ: chứa ảnh tĩnh), hãy copy nó
 COPY --from=builder /app/public ./public
 
-# Set the PORT environment variable that Next.js will listen on
-ENV PORT 3000
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_PAGE_SIZE=12
+ENV NEXT_PUBLIC_API_URL=http://localhost:4000
+ENV JWT_SECRET=jwtsecret12345
 
-# Expose the port your Next.js application will listen on
+# Mở cổng mà ứng dụng Next.js của bạn sẽ lắng nghe
 EXPOSE 3000
 
-# Command to run your Next.js application when the container starts
-# 'npm start' will start the Next.js application in production mode.
+# Lệnh để chạy ứng dụng Next.js khi container khởi động
+# Đây là cách chuẩn để chạy Next.js app trong production
 CMD ["npm", "start"]

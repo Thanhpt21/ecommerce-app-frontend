@@ -21,7 +21,7 @@ interface HeaderAdminProps {
 
 export default function HeaderAdmin({ collapsed, onCollapse }: HeaderAdminProps) {
   const { data: user, isLoading } = useCurrent();
-  const { logout } = useLogout();
+  const { logoutUser } = useLogout();
 
   const items: MenuProps['items'] = [
     {
@@ -37,7 +37,7 @@ export default function HeaderAdmin({ collapsed, onCollapse }: HeaderAdminProps)
       label: 'Đăng xuất',
       icon: <LogoutOutlined />,
       danger: true,
-      onClick: logout,
+      onClick:() => logoutUser,
     },
   ];
 

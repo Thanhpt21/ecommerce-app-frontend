@@ -17,7 +17,7 @@ import {
 
 import ContactBanner from '@/assets/banner/ContactBanner.jpg';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text, Paragraph } = Typography;  
 const { TextArea } = Input;
 
 export default function ContactPage() {
